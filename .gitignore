@@ -6,5 +6,5 @@
 *.o
 *.a 
 *.so 
-*.out 
-
+*.out
+/dan_rps.code-workspace
