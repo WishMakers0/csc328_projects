@@ -1,0 +1,10 @@
+#output files
+./bin/
+./obj/
+
+#object files and pre-compiled binaries
+*.o
+*.a 
+*.so 
+*.out 
+
