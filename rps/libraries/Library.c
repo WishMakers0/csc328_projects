@@ -77,3 +77,19 @@ int recvDelim(int socket, char *buffer, int flags){
     return -1;
     
 }
+
+void recvFinal(int socket, char *buffer, int flags){
+	status = recvDelim(socket, buffer, 32, flags);
+	
+	if(status = 0){
+		return 0;	
+	}
+	else if (status = -1){
+		recvFinal(socket, buffer, 32, flags);	
+	}
+	else{
+		printf("Fatal Error: Could not receive data.");
+		exit(0);	
+	}
+	
+}
