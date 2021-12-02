@@ -22,4 +22,7 @@ extern int recvDelim(int socket, char *buffer, int flags);
     // int socket, void *buffer, size_t length, int flags, int messageType
 extern int sendDelim(int sockfd, char *buffer, size_t length, int flags, int messageType);
 
+// recvFinal simply takes the return value of recvDelim and does certain things with it depending on what that value is.
+extern void recvFinal(int status, int socket, char *buffer, int flags);
+
 #endif
