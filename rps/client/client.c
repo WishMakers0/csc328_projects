@@ -29,9 +29,14 @@
 
 //preprocessor defines
 #define MAXCHARS 256
+#define NICKSIZE 24
+#define NICKBUFFER 32
 
 //enum for constants declared in place of a million preprocessor definitions
 typedef enum MessageType { Ready=1, Go=2, Nick=3, Retry=4, RPS=5, Score=8, Stop=9 };
+
+//Note 1: spit out error message and prompt for another message?
+//Classic Two Generals' Problem - https://www.youtube.com/watch?v=IP-rGJKSZ3s
 
 /*
 Function name: getTrueMessageLength
@@ -41,6 +46,7 @@ Parameters: char* buffer - the received full message
 
 Return value: int length - the length of the "true" message within an encoded packet
 */
+
 int getTrueMessageLength(char* buffer) {
 	//first two characters are always , followed by a number for the type - start indexing at 2
 	int length = 0;
@@ -65,6 +71,7 @@ Parameters: char* buffer - the received message to translate
 
 Return value: bool success - success/failure upon parsing message
 */
+
 bool parseMessage(char* buffer, MessageType type) {
 	bool result = true;
 	char copyBuffer[MAXCHARS];
@@ -134,9 +141,33 @@ Description:
 
 Parameters: char* ip - ip address specified
 			int port - port number specified
+			int* socket - pointer to socket int
 Return value: 
 */
-void establishConnection(char* ip, int port) {
+void establishConnections(char* ip, int port, int* sock, struct sockaddr *server_addr, struct sockaddr_in *client_addr, char* buffer) {
+	*sock = socket(AF_INET, SOCK_STREAM, 0); //establish socket file descriptor
+
+	//create memory and initialize sockaddr
+	memset(server_addr, 0, sizeof(struct sockaddr));
+	server_addr->sin_family = AF_INET;
+    server_addr->sin_addr.s_addr = inet_addr(ip);
+    server_addr->sin_port = htons(port);
+
+	//binds the host socket
+	bind(*sock, server_addr, sizeof(struct sockaddr));
+	
+	//connects to server socket
+	if (connect(*sock, server_addr, sizeof(struct sockaddr)) != 0) {
+		//error!
+		return -1;
+	}
+
+	sendDelim(*sock, "READY", 5, 0, Ready);
+	printf("Connection with server successful.  Waiting for server response...");
+	recvDelim(*sock, buffer, 8, 0);
+	if(!parseMessage(buffer, Ready)) {
+		//see Note 1
+	}
 
 }
 
@@ -148,8 +179,38 @@ Parameters:
 Return value: 
 */
 
-void nameEntry() {
+void nameEntry(char* nick, char* buffer, int* sock) {
 	//Obvious note to future self: when parsing nickname options PLEASE make sure there aren't any digits, commas, or at signs
+	bool confirm = false;
+	while (!confirm) {
+		printf("Enter a display name (max 24 characters): ");
+		fgets(nick, NICKSIZE, stdin);
+
+		printf("Confirming...\n");
+		confirm = true;
+		for(int i = 0; i < NICKSIZE; i++) {
+			if (nick[i] == ',' || nick[i] == '@' || nick[i] > 47 || nick[i] < 58) {
+				confirm = false;
+				printf("Display name can not contain digits, commas, or the at sign.  Try again.\n")
+			}
+		}
+
+		printf("Waiting for server...");
+		recvDelim(*sock, buffer, 8, 0);
+		if(parseMessage(buffer, Ready)) {
+			confirm = true;
+			printf("Nickname approved.  Waiting for opponent...\n");
+		}
+		else if(parseMessage(buffer, Retry)) {
+			confirm = false;
+			printf("Nickname denied - same as opponent.  Try again.\n");
+		}
+		else {
+			//See Note 1.
+		}
+	}
+	
+
 }
 
 /*
@@ -160,11 +221,11 @@ Parameters:
 Return value: 
 */
 
-void awaitGo(char* buffer) {
-	//recvDelim(socket, buffer, MAXCHARS, 0);
+void awaitGo(char* buffer, int* sock) {
+	//wait logic
+	recvDelim(*sock, buffer, 0, 5);
 	if(!parseMessage(buffer, Go)) {
-		//spit out error message and prompt for another message?
-		//Classic Two Generals' Problem - https://www.youtube.com/watch?v=IP-rGJKSZ3s
+		//see Note 1
 	}
 }
 
@@ -188,8 +249,17 @@ Parameters:
 Return value: 
 */
 
-void awaitLoop() {
-
+bool awaitLoop(int* sock, char* buffer) {
+	recvDelim(*sock, buffer, 8, 0); //Problem: length doesn't match!!!
+	if(parseMessage(buffer, Go)) {
+		printf("Nickname approved.  Waiting for opponent...\n");
+	}
+	else if(parseMessage(buffer, Stop)) {
+		printf("Nickname denied - same as opponent.  Try again.\n");
+	}
+	else {
+		//See Note 1.
+	}
 }
 
 /*
@@ -215,7 +285,7 @@ Return value:
 void gameOverRoutine(char* buffer) {
 	//recvDelim(socket, buffer, MAXCHARS, 0);
 	if(!parseMessage(buffer, Stop)) {
-		//spit out error message and prompt for another message?
+		//see Note 1
 	}
 }
 
@@ -245,25 +315,32 @@ int main(int argc, char* argv[]) {
     //Initialize proper variables
 	char buffer[MAXCHARS]; //generic use text buffer
 	char nickname[MAXCHARS]; //nickname text buffer
+	char server_addr[MAXCHARS] //server address
 	bool gameFinished = false;
-	int socket; //socket???
+	int sock; //socket identifier
+	int port; //port number
+	struct sockaddr server_addr
+	struct sockaddr_in client_addr;
 
     // Check number of arguments to ensure correctness
     if (argc != 3) {
         //print response that displays proper usage
         return 0;
     }
+	
+	//Copy arguments into proper variables
+	strcpy(argv[1], server_addr);
+	port = atoi(argv[2]);
 
     //Sequence of events
 
 	//Establish connection with server, then send ready message.
-	//establishConnection();
+	//establishConnection(server_addr, port, &sock);
 
 	//Wait for a response back from the server, then verify it.
 	//recvDelim(socket, buffer, MAXCHARS, 0);
 	if(!parseMessage(buffer, Ready)) {
-		//spit out error message and prompt for another message?
-		//Classic Two Generals' Problem - https://www.youtube.com/watch?v=IP-rGJKSZ3s
+		//see Note 1
 	}
 
 	//Prompt user for nickname, send to server, wait for response
