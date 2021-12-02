@@ -39,6 +39,18 @@ typedef enum MessageType { Ready=1, Go=2, Nick=3, Retry=4, RPS=5, Score=8, Stop=
 //Classic Two Generals' Problem - https://www.youtube.com/watch?v=IP-rGJKSZ3s
 
 /*
+Function name: finalDisplay
+Description: 
+
+Parameters: 
+Return value: 
+*/
+void finalDisplay(char* buffer) {
+	//Process copy buffer from processed message to display final score results.
+	//example packet: SCORE
+}
+
+/*
 Function name: getTrueMessageLength
 Description: 
 
@@ -120,6 +132,7 @@ bool parseMessage(char* buffer, MessageType type) {
 			if (strncmp(copyBuffer,"SCORE",5)) {
 				result = true;
 				//process other parts of score in remaining segment of message?
+				finalDisplay(copyBuffer);
 			}
 			break;
 		case Stop:
@@ -133,6 +146,23 @@ bool parseMessage(char* buffer, MessageType type) {
 			break;
 	}
 	return result;
+}
+
+/*
+Function name: recvWrap
+Description: 
+
+Parameters: int* sock - socket file descriptor //could be replaced with int?
+			char* buffer - buffer to write to
+			MessageType type - type of message to check for
+			size_t length - length of message to check
+Return value: 
+*/
+void recvWrap(int sock, char* buffer, MessageType type, size_t length) {
+	recvDelim(sock, buffer, length, 0);
+	if(!parseMessage(buffer, type)) {
+		//see Note 1
+	}
 }
 
 /*
@@ -164,11 +194,7 @@ void establishConnections(char* ip, int port, int* sock, struct sockaddr *server
 
 	sendDelim(*sock, "READY", 5, 0, Ready);
 	printf("Connection with server successful.  Waiting for server response...");
-	recvDelim(*sock, buffer, 8, 0);
-	if(!parseMessage(buffer, Ready)) {
-		//see Note 1
-	}
-
+	recvWrap(*sock, buffer, 8, Ready);
 }
 
 /*
@@ -179,7 +205,7 @@ Parameters:
 Return value: 
 */
 
-void nameEntry(char* nick, char* buffer, int* sock) {
+void nameEntry(char* nick, char* buffer, int sock) {
 	//Obvious note to future self: when parsing nickname options PLEASE make sure there aren't any digits, commas, or at signs
 	bool confirm = false;
 	while (!confirm) {
@@ -196,7 +222,7 @@ void nameEntry(char* nick, char* buffer, int* sock) {
 		}
 
 		printf("Waiting for server...");
-		recvDelim(*sock, buffer, 8, 0);
+		recvDelim(sock, buffer, 8, 0);
 		if(parseMessage(buffer, Ready)) {
 			confirm = true;
 			printf("Nickname approved.  Waiting for opponent...\n");
@@ -221,12 +247,9 @@ Parameters:
 Return value: 
 */
 
-void awaitGo(char* buffer, int* sock) {
+void awaitGo(int sock, char* buffer) {
 	//wait logic
-	recvDelim(*sock, buffer, 0, 5);
-	if(!parseMessage(buffer, Go)) {
-		//see Note 1
-	}
+	recvWrap(sock, buffer, 5, Go);
 }
 
 /*
@@ -249,29 +272,19 @@ Parameters:
 Return value: 
 */
 
-bool awaitLoop(int* sock, char* buffer) {
-	recvDelim(*sock, buffer, 8, 0); //Problem: length doesn't match!!!
+bool awaitLoop(int sock, char* buffer) {
+	bool result;
+	recvDelim(*sock, buffer, 8, 0); //Problem: length doesn't match...!!!
 	if(parseMessage(buffer, Go)) {
-		printf("Nickname approved.  Waiting for opponent...\n");
+		result = false;
 	}
-	else if(parseMessage(buffer, Stop)) {
-		printf("Nickname denied - same as opponent.  Try again.\n");
+	else if(parseMessage(buffer, Score)) {
+		result = true;
 	}
 	else {
 		//See Note 1.
 	}
-}
-
-/*
-Function name: finalDisplay
-Description: 
-
-Parameters: 
-Return value: 
-*/
-
-void finalDisplay() {
-
+	return result;
 }
 
 /*
@@ -282,11 +295,9 @@ Parameters:
 Return value: 
 */
 
-void gameOverRoutine(char* buffer) {
-	//recvDelim(socket, buffer, MAXCHARS, 0);
-	if(!parseMessage(buffer, Stop)) {
-		//see Note 1
-	}
+void gameOverRoutine(int sock, char* buffer) {
+	recvWrap(sock, buffer, 7, Stop);
+
 }
 
 /*
@@ -315,11 +326,11 @@ int main(int argc, char* argv[]) {
     //Initialize proper variables
 	char buffer[MAXCHARS]; //generic use text buffer
 	char nickname[MAXCHARS]; //nickname text buffer
-	char server_addr[MAXCHARS] //server address
+	char ip[MAXCHARS] //server address
 	bool gameFinished = false;
 	int sock; //socket identifier
 	int port; //port number
-	struct sockaddr server_addr
+	struct sockaddr server_addr;
 	struct sockaddr_in client_addr;
 
     // Check number of arguments to ensure correctness
@@ -335,23 +346,19 @@ int main(int argc, char* argv[]) {
     //Sequence of events
 
 	//Establish connection with server, then send ready message.
-	//establishConnection(server_addr, port, &sock);
+	establishConnection(ip, port, sock, server_addr, client_addr, buffer);
 
-	//Wait for a response back from the server, then verify it.
-	//recvDelim(socket, buffer, MAXCHARS, 0);
-	if(!parseMessage(buffer, Ready)) {
-		//see Note 1
-	}
+	recvWrap(sock, buffer, 8, Ready);
 
 	//Prompt user for nickname, send to server, wait for response
-	//nameEntry();
+	nameEntry(nickname, buffer, sock);
 
 	//Wait for Go message to be received and verified, then proceed with Roshambo
 	//Game loop begins here
-	awaitGo(buffer);
+	awaitGo(sock, buffer);
 	while(!gameFinished) {
 		//rpsGameplay();
-		//gameFinished = awaitLoop(&gameFinished);
+		gameFinished = awaitLoop(sock, buffer);
 	}
 
 	//Wait for a stop message to ensure connection termination, then terminate
