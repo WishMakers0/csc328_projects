@@ -48,7 +48,7 @@ int sendDelim(int sockfd, char *buffer, size_t length, int flags, int messageTyp
     return 0;
 }
 
-int recvDelim(int socket, char *buffer, size_t length, int flags){
+int recvDelim(int socket, char *buffer, int flags){
     int err;
     int attempts;
     char errRcv[22] = "Error: Receive failed";
@@ -58,7 +58,7 @@ int recvDelim(int socket, char *buffer, size_t length, int flags){
         if(err < 0){
             error(errRcv, 0, errno);
         }
-        if(buffer[0] == ',' && (buffer[1] > 47 && buffer[1] < 58) && buffer[length-1] == '@'){
+        if(buffer[0] == ',' && (buffer[1] > 47 && buffer[1] < 58) && buffer[31] == '@'){
             return 0;    
         }
     }
