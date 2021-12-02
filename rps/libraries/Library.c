@@ -52,17 +52,27 @@ int recvDelim(int socket, char *buffer, int flags){
     int err;
     int attempts;
     char errRcv[22] = "Error: Receive failed";
+    int length = 0;
+	bool atFound = false;
     
-    for(attempts = 0; attempts < 5; attempts++){
-        err = recv(socket, buffer, length, flags);
-        if(err < 0){
-            error(errRcv, 0, errno);
-        }
-        if(buffer[0] == ',' && (buffer[1] > 47 && buffer[1] < 58) && buffer[31] == '@'){
-            return 0;    
-        }
+    err = recv(socket, buffer, 32, flags);
+    
+    if(err < 0){
+        error(errRcv, 0, errno);
     }
-    
+
+	for(int i = 2; (i < 32) || !atFound; i++) {
+        if (buffer[i] == '@') {
+		    atFound = true;
+	    }
+	    else {
+		    length++;
+	    }
+    }
+
+    if(buffer[0] == ',' && (buffer[1] > 47 && buffer[1] < 58) && atFound == true){
+        return 0;    
+    }
     return -1;
     
 }
