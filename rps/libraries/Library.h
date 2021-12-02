@@ -8,7 +8,8 @@
 extern void error(char *errMsg, int errType, int errNum);
 
 // Receives a message, and checks if it received the delimiter.
-// If not, it clears the buffer and tries again.
+// Function has 3 returns: 0 for all is good, -1 for bad recv values (no comma, number, or delimiter), and -2 for failed recv.
+// Parameters are all the parameters for recv, sans the length. Length is statically set to 32.
 extern int recvDelim(int socket, char *buffer, int flags);
 
 // Sends a message with requisite additions:
