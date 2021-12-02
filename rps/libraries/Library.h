@@ -9,7 +9,7 @@ extern void error(char *errMsg, int errType, int errNum);
 
 // Receives a message, and checks if it received the delimiter.
 // If not, it clears the buffer and tries again.
-extern int recvDelim(int socket, char *buffer, size_t length, int flags);
+extern int recvDelim(int socket, char *buffer, int flags);
 
 // Sends a message with requisite additions:
 // Beginning of message, message type, and delimiter value.
