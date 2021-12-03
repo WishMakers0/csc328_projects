@@ -6,8 +6,8 @@
 /*   Professor:        Dr. Frye                      */
 /*   Assignment:       RPS - Server                  */
 /*   Filename:         Server.c                      */
-/*	 Language:		   C                             */
-/*	 Version:		   8.3.0                         */
+/*	 Language:		   C                 */
+/*	 Version:		   8.3.0             */
 /*   Command:                                        */
 /*   Purpose:                                        */
 			
@@ -28,14 +28,14 @@
 #define LISTENQ   1024
 #define MAX   256
 /*************************************************************************/
-/* 																		 */
+/* 									 */
 /* Function name: connp                                                  */                                
 /* Description: connects players                                         */
 /* Parameters:   
     sockfd:Host socket
 	connfd:Client socket
 	cliaddr:Client address
-	clilen:Length of client adress                                       */
+	clilen:Length of client adress                                    */
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
