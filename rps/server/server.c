@@ -65,7 +65,7 @@ int strsub(char *buffer, char* to) {
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void connp(int sockfd, int connfd,  struct sockaddr cliaddr, int clilen){
+void connp(int *sockfd, int *connfd,  struct sockaddr *cliaddr, int clilen){
 
 	if( (connfd = accept(sockfd, (struct sockaddr *) &cliaddr, &clilen)) <0){
 			if ((errno == EINTR) || (errno == ECONNABORTED))
@@ -75,7 +75,8 @@ void connp(int sockfd, int connfd,  struct sockaddr cliaddr, int clilen){
 		perror("accept error");
 		exit(-1);   // possibly change to continue, depends on functionality. 
 	      }   // end else
-	  }   // end if accept					
+	  }   // end if accept	
+	return;
 }
 
 /*************************************************************************/
@@ -92,36 +93,72 @@ void rpsRun(){
 
 /*************************************************************************/
 /* 									 */
+/* Function name: nameFirst                                              */                           
+/* Description: recieves names form child based on which one is first    */
+/* Parameters:                                                           */
+/* Return Value: none                                                    */
+/*                                                                       */
+/*************************************************************************/
+int nameFirst(int *pipe1, int *pipe2[], char  *name1, char  *name2, char  *name1size, char  *name2size){
+	while(block1 == -1 || block2 ==-1){
+			block1 = read(pipe1[0], &name1, sizeof(tbuff1));
+
+			block2 = read(pipe2[0], &name2, sizeof(tbuff2));
+
+		}
+	if(block1 = -1){
+		name2size = read(pipe2[0], &name2, sizeof(tbuff2));
+		return(2);
+	}
+	if(block2 = -1){
+		name1size = read(pipe1[0], &name1, sizeof(tbuff1));
+		return(1);
+	}
+	
+}
+
+
+/*************************************************************************/
+/* 									 */
 /* Function name: isReady                                                */                                
 /* Description: if ready, returns true                                   */
 /* Parameters:                                                           */
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-bool isReady(connfd){
+bool isReady(int *connfd){
 	char buff[MAX];  //Buffer where the message is originally sent.
 	char tbuff[MAX]; // The function that takes in the processed data.
 	recvFinal(connfd, buff, 0);
+	strsub(buff[], tbuff[]);
+	return(strncmp(tbuff[], "READY", 5));
 }
 
 /*************************************************************************/
 /* 									 */
 /* Function name: getName                                                */                                
-/* Description: Grabs name and returns it                                */
+/* Description: Grabs name, ships it and size to pipe                    */
 /* Parameters:                                                           */
 /* Return Value: name chosen                                             */
 /*                                                                       */
 /*************************************************************************/
-char getName(int connfd, bool retry){
+void getName(int *connfd, bool retry, int *pipe[]){
 	char buff[MAX];
 	char tbuff[MAX];
+	char finbuff[MAX];
+	int nsize; //size of the name
 	if(retry == TRUE){
 		sendDelim(connfd, "RETRY", sizeof("RETRY"), 0, 4);	
 		
 	}
 	recvFinal(connfd, buff, 0);
-	
-	return tbuff[];
+	nsize = strsub(buff[], tbuff[]);
+	if(strncmp(tbuff, "NICK", 4)){
+		finbuff[] = *tbuff[4];
+		write(pipe[1], &finbuff, sizeof(finbuff));
+		write(pipe[1], size, sizeof(size));
+	}
+	return;
 	
 }
 
@@ -136,7 +173,7 @@ char getName(int connfd, bool retry){
 void setpipe(int *pipe){
 	pipe(pipe);
 	fcntl(pipe[], F_SETFL, 0_NONBLOCK);
-	
+	return;
 }
 /*************************************************************************/
 /* 									 */
@@ -146,6 +183,7 @@ void setpipe(int *pipe){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
+/*
 void startCheck(ppid, connfd, conn2fd){
 	pid_t pid;
 	pid_t pid2; //the 2 pids possibly not needed
@@ -155,7 +193,7 @@ void startCheck(ppid, connfd, conn2fd){
 	int first; //will be set to either 1 or 2 depending on who typed name first.
 	char name1[NICKSIZE];
 	char name2[NICKSIZE];
-	
+	qsock = socket(AF_INET, SOCK_STREAM,0)
 	if ( (pid = fork()) == 0) {      // child process made. 
 		close(p1rec[0]);
 		connp(sockfd, connfd, cliaddr, clilen); //waiting for player 1
@@ -237,9 +275,12 @@ void startCheck(ppid, connfd, conn2fd){
 	
 	
 }
-
+*/
 
 int main(int argc, char *argv[]){
+	struct sockaddr_in      cliaddr, servaddr;
+	int sockfd;
+	sockfd = socket(AF_INET, SOCK_STREAM,0)
 	int p1sen[2];
 	int p2sen[2];
 	int p1rec[2];
@@ -248,10 +289,14 @@ int main(int argc, char *argv[]){
 	setPipe(p2sen[2]);
 	setPipe(p1rec[2]);
 	setPipe(p2rec[2]);
-	pid_t ppid = getppid();
-	int sockfd, connfd, conn2fd ,len, port, clilen, numg;
-	struct sockaddr_in servaddr, cliaddr;
-	sockfd = socket(AF_INET, SOCK_STREAM, 0;
+	pid_t pid1;
+	pid_t pid2; //the 2 pids possibly not needed
+	char buff1[MAX], buff2[MAX]; //buffs from clients
+	int nsize1, nsize2; //starting name size
+	int block1= -1, block2 = -1; //needed for non blocking run of read. 
+	int first; //will be set to either 1 or 2 depending on who typed name first.
+	char name1[NICKSIZE];
+	char name2[NICKSIZE];
 
 	if(argc == 2){
 		printf("yes 1");
@@ -264,24 +309,46 @@ int main(int argc, char *argv[]){
 		printf("\n Usage: %s <number of rounds> <port number>\n\n", argv[0]);
 		exit(-1);
 	}
-
-	//assign port and ip address for socket
 	memset(&servaddr, 0, sizeof(servaddr));
-	servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-    servaddr.sin_port = htons(port);
+        servaddr.sin_family      = AF_INET;
+        // accept incoming connections on any interface on the server
+        servaddr.sin_addr.s_addr = INADDR_ANY;
+        // accept incoming connections on specified port number, converted to network byte order
+        servaddr.sin_port        = htons(port));
+	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr))
 	
-	bind(sockfd, (struct sockaddr *) $servaddr, sizeof(struct sockaddr)); //binds the host socket
-	
-	listen(sockfd, LISTENQ); //starts listening for connections to the host socket
-	
-	while(1){
+	if ( (pid1 = fork()) == 0) {      // child process made. 
 		
-	
+		close(p1rec[0]);
+		connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
+		if(isReady(conn1fd) == 0){
+			getName(conn1fd, FALSE, *p1Sen[]);
+		}else{
+			printf("Error with isReady()");
+		}
 		
+	}
+	if (pid > 0){ //Parent
 		
-	    
-
+		if ( (pid2 = fork()) == 0) {      // child process 2 made. 
+			close(p2rec[0]);
+			connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
+			if(isReady(conn1fd) == 0){
+				getName(conn2fd, FALSE, *p2Sen[]);
+			}else{
+			printf("Error with isReady()");
+			}
+		}//START OF PARENT
+			
+		first = nameFirst(*p1sen[], *p2sen[], name1, name2, nsize1, nsize2);
+		if(first==1){
+			
+		}else if(first==2){
+			
+		}else{
+		printf("error with nameFirst")	
+		}
+		
 		close(sockfd);        //close listening socket; only with child 
 		close(pfd1[1]);
 		close(pfd2[1]);
