@@ -1,5 +1,6 @@
-#include "netwLib.h"
+#include "Library.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 #include <errno.h>
@@ -79,13 +80,13 @@ int recvDelim(int socket, char *buffer, int flags){
 }
 
 void recvFinal(int socket, char *buffer, int flags){
-	status = recvDelim(socket, buffer, 32, flags);
+	int status = recvDelim(socket, buffer, flags);
 	
 	if(status = 0){
 		return 0;	
 	}
 	else if (status = -1){
-		recvFinal(socket, buffer, 32, flags);	
+		recvFinal(socket, buffer, flags);	
 	}
 	else{
 		printf("Fatal Error: Could not receive data.");

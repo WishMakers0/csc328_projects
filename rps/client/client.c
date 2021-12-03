@@ -20,12 +20,19 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <netwLib.h>
+#include <string.h>
+#include <ctype.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <errno.h>
+#include "Library.h"
 
 //preprocessor defines
 #define MAXCHARS 256
@@ -33,7 +40,7 @@
 #define NICKBUFFER 32
 
 //enum for constants declared in place of a million preprocessor definitions
-typedef enum MessageType { Ready=1, Go=2, Nick=3, Retry=4, RPS=5, Score=8, Stop=9 };
+typedef enum MessageType { Ready=1, Go=2, Nick=3, Retry=4, RPS=5, Score=8, Stop=9 } MessageType;
 
 //Note 1: spit out error message and prompt for another message?
 //Classic Two Generals' Problem - https://www.youtube.com/watch?v=IP-rGJKSZ3s
@@ -48,6 +55,8 @@ Return value:
 void finalDisplay(char* buffer) {
 	//Process copy buffer from processed message to display final score results.
 	//example packet: SCORE
+	
+	//wait until later
 }
 
 /*
@@ -159,7 +168,7 @@ Parameters: int* sock - socket file descriptor //could be replaced with int?
 Return value: 
 */
 void recvWrap(int sock, char* buffer, MessageType type, size_t length) {
-	recvDelim(sock, buffer, length, 0);
+	recvDelim(sock, buffer, 0);
 	if(!parseMessage(buffer, type)) {
 		//see Note 1
 	}
@@ -174,7 +183,7 @@ Parameters: char* ip - ip address specified
 			int* socket - pointer to socket int
 Return value: 
 */
-void establishConnections(char* ip, int port, int* sock, struct sockaddr *server_addr, struct sockaddr_in *client_addr, char* buffer) {
+int establishConnections(char* ip, int port, int* sock, struct sockaddr_in* server_addr, char* buffer) {
 	*sock = socket(AF_INET, SOCK_STREAM, 0); //establish socket file descriptor
 
 	//create memory and initialize sockaddr
@@ -184,10 +193,10 @@ void establishConnections(char* ip, int port, int* sock, struct sockaddr *server
     server_addr->sin_port = htons(port);
 
 	//binds the host socket
-	bind(*sock, server_addr, sizeof(struct sockaddr));
+	bind(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in));
 	
 	//connects to server socket
-	if (connect(*sock, server_addr, sizeof(struct sockaddr)) != 0) {
+	if (connect(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in)) != 0) {
 		//error!
 		return -1;
 	}
@@ -195,6 +204,7 @@ void establishConnections(char* ip, int port, int* sock, struct sockaddr *server
 	sendDelim(*sock, "READY", 5, 0, Ready);
 	printf("Connection with server successful.  Waiting for server response...");
 	recvWrap(*sock, buffer, 8, Ready);
+	return 0;
 }
 
 /*
@@ -217,12 +227,18 @@ void nameEntry(char* nick, char* buffer, int sock) {
 		for(int i = 0; i < NICKSIZE; i++) {
 			if (nick[i] == ',' || nick[i] == '@' || nick[i] > 47 || nick[i] < 58) {
 				confirm = false;
-				printf("Display name can not contain digits, commas, or the at sign.  Try again.\n")
+				printf("Display name can not contain digits, commas, or the at sign.  Try again.\n");
 			}
 		}
 
+		//Sends nickname packet
+		strncpy(buffer, "NICK", 4);
+		strncat(buffer, nick, NICKSIZE);
+		sendDelim(sock, buffer, NICKBUFFER, 0, Nick);
+
+		//Waits for server response
 		printf("Waiting for server...");
-		recvDelim(sock, buffer, 8, 0);
+		recvDelim(sock, buffer, 0);
 		if(parseMessage(buffer, Ready)) {
 			confirm = true;
 			printf("Nickname approved.  Waiting for opponent...\n");
@@ -235,8 +251,6 @@ void nameEntry(char* nick, char* buffer, int sock) {
 			//See Note 1.
 		}
 	}
-	
-
 }
 
 /*
@@ -260,7 +274,10 @@ Parameters:
 Return value: 
 */
 
-void rpsGameplay() {
+void rpsGameplay(int sock,char* buffer) {
+	printf("ROSHAMBO!\nEnter your choice here between the CAPS options: \nROCK, PAPER, SCISSORS, shoot! -> ");
+	fgets(buffer, 8, stdin);
+	printf("Sending to server... Awaiting response... ");
 
 }
 
@@ -274,7 +291,7 @@ Return value:
 
 bool awaitLoop(int sock, char* buffer) {
 	bool result;
-	recvDelim(*sock, buffer, 8, 0); //Problem: length doesn't match...!!!
+	recvDelim(sock, buffer, 0); //Problem: length doesn't match...!!!
 	if(parseMessage(buffer, Go)) {
 		result = false;
 	}
@@ -326,27 +343,43 @@ int main(int argc, char* argv[]) {
     //Initialize proper variables
 	char buffer[MAXCHARS]; //generic use text buffer
 	char nickname[MAXCHARS]; //nickname text buffer
-	char ip[MAXCHARS] //server address
+	char ip[MAXCHARS]; //server address
 	bool gameFinished = false;
 	int sock; //socket identifier
 	int port; //port number
-	struct sockaddr server_addr;
-	struct sockaddr_in client_addr;
+	struct sockaddr_in server_addr;
+	//struct sockaddr_in client_addr;
 
     // Check number of arguments to ensure correctness
-    if (argc != 3) {
-        //print response that displays proper usage
-        return 0;
+    if (argc == 3) {
+		//Copy arguments into proper variables
+		strcpy(argv[1], ip);
+		port = atoi(argv[2]);
     }
-	
-	//Copy arguments into proper variables
-	strcpy(argv[1], server_addr);
-	port = atoi(argv[2]);
+	else if (argc == 2) {
+		//Copy arguments into proper variables
+		strcpy(argv[1], ip);
+		port = 1024;
+	}
+	else {
+		//print response that displays proper usage
+		printf("Proper usage: \n./client.out <ip_address> <port>\n");
+        return 0;
+	}
 
+	//Ensure port is within range
+	if ((port < 0) || (port > 65535)) {
+		printf("Invalid port number: 0 - 65535\n");
+        return 0;
+	}
+	
     //Sequence of events
 
 	//Establish connection with server, then send ready message.
-	establishConnection(ip, port, sock, server_addr, client_addr, buffer);
+	if (establishConnections(ip, port, &sock, &server_addr, buffer) < 0) {
+		printf("Connection not established, aborting.\n");
+		return -1;
+	}
 
 	recvWrap(sock, buffer, 8, Ready);
 
@@ -362,9 +395,11 @@ int main(int argc, char* argv[]) {
 	}
 
 	//Wait for a stop message to ensure connection termination, then terminate
-	gameOverRoutine(buffer);
+	gameOverRoutine(sock, buffer);
 	
 	//terminate connection formally??  how??
+	close(sock);
+	printf("Well at least it compiles! \n");
 
 	return 0;
 }
