@@ -193,7 +193,7 @@ int establishConnections(char* ip, int port, int* sock, struct sockaddr_in* serv
     server_addr->sin_port = htons(port);
 
 	//binds the host socket
-	bind(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in));
+	//bind(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in));
 	
 	//connects to server socket
 	if (connect(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in)) != 0) {
