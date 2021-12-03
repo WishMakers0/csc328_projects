@@ -41,18 +41,16 @@
 /*                                                                       */
 /*************************************************************************/
 void connp(int sockfd, int connfd,  struct sockaddr cliaddr, int clilen){
-	
+
 	if( (connfd = accept(sockfd, (struct sockaddr *) &cliaddr, &clilen)) <0){
 			if ((errno == EINTR) || (errno == ECONNABORTED))
 				continue;         // back to while() 
 			 else
-              {
-                perror("accept error");
-                exit(-1);   // possibly change to continue, depends on functionality. 
-              }   // end else
-          }   // end if accept
-	
-						
+	      {
+		perror("accept error");
+		exit(-1);   // possibly change to continue, depends on functionality. 
+	      }   // end else
+	  }   // end if accept					
 }
 
 /*************************************************************************/
@@ -65,14 +63,56 @@ void connp(int sockfd, int connfd,  struct sockaddr cliaddr, int clilen){
 /*************************************************************************/
 void rpsRun(){
 	
+}
+
+/*************************************************************************/
+/* 									 */
+/* Function name: isReady                                                */                                
+/* Description: if ready, returns true                                   */
+/* Parameters:                                                           */
+/* Return Value: none                                                    */
+/*                                                                       */
+/*************************************************************************/
+bool isReady(connfd){
+	char buff[MAX];  //Buffer where the message is originally sent.
+	char tbuff[MAX]; // The function that takes in the processed data.
+	recvFinal(connfd, buff, 0);
+}
+
+/*************************************************************************/
+/* 									 */
+/* Function name: getName                                                */                                
+/* Description: Grabs name and returns it                                */
+/* Parameters:                                                           */
+/* Return Value: name chosen                                             */
+/*                                                                       */
+/*************************************************************************/
+char getName(int connfd, bool retry){
+	char buff[MAX];
+	char tbuff[MAX];
+	if(retry == TRUE){
+		sendDelim(connfd, "RETRY", sizeof("RETRY"), 0, 4);	
+		
+	}
+	recvFinal(connfd, buff, 0);
 	
-	
-	
-			
-	
+	return tbuff[];
 	
 }
 
+/*************************************************************************/
+/* 									 */
+/* Function name: pipeSet                                                */                                
+/* Description: sets up pipe                                             */
+/* Parameters:     pipe                                                  */
+/* Return Value: none                                                    */
+/*                                                                       */
+/*************************************************************************/
+void setpipe(int *pipe){
+	pipe(pipe);
+	fcntl(pipe[], F_SETFL, 0_NONBLOCK);
+	
+}
 /*************************************************************************/
 /* 									 */
 /* Function name: startCheck                                             */                                
@@ -85,9 +125,6 @@ void startCheck(ppid, connfd, conn2fd){
 	pid_t pid;
 	pid_t pid2; //the 2 pids possibly not needed
 	char buff1[MAX], buff2[MAX]; //buffs from clients
-	char *b1 = buff1, *b2 = buff2;
-	char tbuff1[MAX}, tbuff2[MAX] //the copy of the buffs for editing
-	char *tb1 = tbuff1, *tb2 = tbuff2;
 	int namesize = 0; //starting name size
 	int block1= -1, block2 = -1; //needed for non blocking run of read. 
 	int first; //will be set to either 1 or 2 depending on who typed name first.
@@ -97,7 +134,7 @@ void startCheck(ppid, connfd, conn2fd){
 	if ( (pid = fork()) == 0) {      // child process made. 
 		close(p1rec[0]);
 		connp(sockfd, connfd, cliaddr, clilen); //waiting for player 1
-		recvFinal(connfd, buff1, 0);
+		
 		b1 = b1+2;
 		strncpy(tbuff1, buff1,5);
 		if(strncmp(tbuff1, "READY", 5)){
@@ -175,34 +212,17 @@ void startCheck(ppid, connfd, conn2fd){
 	
 	
 }
-/*************************************************************************/
-/* 																		 */
-/* Function name: checkRec                                               */                                
-/* Description: runs each match                                          */
-/* Parameters:                                                           */
-/* Return Value: none                                                    */
-/*                                                                       */
-/*************************************************************************/
-checkRec(int check){
-	if(check = -2)
-		exit(-1);
-	if(check = -1)
-		
-}
+
 
 int main(int argc, char *argv[]){
 	int p1sen[2];
 	int p2sen[2];
 	int p1rec[2];
 	int p2rec[2];
-	pipe(p1sen);
-	pipe(p2sen);
-	pipe(p1rec);
-	pipe(p2rec);
-	fcntl(p1sen[], F_SETFL, 0_NONBLOCK);
-	fcntl(p2sen[], F_SETFL, 0_NONBLOCK);
-	fcntl(p1rec[], F_SETFL, 0_NONBLOCK);
-	fcntl(p2rec[], F_SETFL, 0_NONBLOCK);
+	setPipe(p1sen[2]);
+	setPipe(p2sen[2]);
+	setPipe(p1rec[2]);
+	setPipe(p2rec[2]);
 	pid_t ppid = getppid();
 	int sockfd, connfd, conn2fd ,len, port, clilen, numg;
 	struct sockaddr_in servaddr, cliaddr;
