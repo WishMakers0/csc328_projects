@@ -28,6 +28,31 @@
 #define LISTENQ   1024
 #define MAX   256
 #define NICKSIZE 24
+
+
+/*
+Function name: strsub
+Description: 
+    Gets a substring from our packet format (ignores the comma, message type, and delimiter)
+
+Parameters: char* buffer -  original string
+            char* to - where to put the substring
+Return value: int - size of the substring
+*/
+int strsub(char *buffer, char* to) {
+    char* start = &buffer[2];
+    int length = 0;
+    char* i = start;
+    while(!((*i == '@') || (length > 253))) { //pointer arithmetic, fun
+        length++; i++;
+    }
+    if (length > 253) {
+        //error: out of bounds write?  improperly formatted packet?  either way something's wrong
+    }
+    strncpy(to, start, length);
+    return length;
+}
+
 /*************************************************************************/
 /* 									 */
 /* Function name: connp                                                  */                                
