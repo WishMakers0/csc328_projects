@@ -278,7 +278,7 @@ void rpsGameplay(int sock,char* buffer) {
 	printf("ROSHAMBO!\nEnter your choice here between the CAPS options: \nROCK, PAPER, SCISSORS, shoot! -> ");
 	fgets(buffer, 8, stdin);
 	printf("Sending to server... Awaiting response... ");
-
+	sendDelim(sock, buffer, NICKBUFFER, 0, RPS);
 }
 
 /*
