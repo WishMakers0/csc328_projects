@@ -158,12 +158,12 @@ int isReady(int *connfd){
 /* Return Value: name chosen                                             */
 /*                                                                       */
 /*************************************************************************/
-void getName(int *connfd, bool retry, int *pipe){
+void getName(int *connfd, int retry, int *pipe){
 	char buff[MAX];
 	char tbuff[MAX];
 	char finbuff[MAX];
 	int nsize; //size of the name
-	if(retry == TRUE){
+	if(retry == 1){
 		sendDelim(connfd, "RETRY", sizeof("RETRY"), 0, 4);	
 		
 	}
@@ -199,99 +199,6 @@ void setpipe(int *pip){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-/*
-void startCheck(ppid, connfd, conn2fd){
-	pid_t pid;
-	pid_t pid2; //the 2 pids possibly not needed
-	char buff1[MAX], buff2[MAX]; //buffs from clients
-	int namesize = 0; //starting name size
-	int block1= -1, block2 = -1; //needed for non blocking run of read. 
-	int first; //will be set to either 1 or 2 depending on who typed name first.
-	char name1[NICKSIZE];
-	char name2[NICKSIZE];
-	qsock = socket(AF_INET, SOCK_STREAM,0)
-	if ( (pid = fork()) == 0) {      // child process made. 
-		close(p1rec[0]);
-		connp(sockfd, connfd, cliaddr, clilen); //waiting for player 1
-		
-		b1 = b1+2;
-		strncpy(tbuff1, buff1,5);
-		if(strncmp(tbuff1, "READY", 5)){
-			recvFinal(connfd, buff1, 0);
-			b1 = b1+2;
-			strncpy(tbuff1, buff1,30);
-			if(strncmp(tbuff1, "NICK", 4)){
-				tb1=tb1+4;
-				write(p1sen[1], &tbuff1, sizeof(tbuff1));
-			}
-		}
-	}
-	if (pid > 0){ //Parent
-		if ( (pid2 = fork()) == 0) {      // child process 2 made. 
-			close(p2rec[0]);
-			connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
-			recvFinal(conn2fd, buff2, 0);
-			b2 = b2+2;
-			strncpy(tbuff2, buff2,5);
-			if(strncmp(tbuff1, "READY", 5)){
-				recvFinal(conn2fd, buff2, 0);
-				b2 = b2+2;
-				strncpy(tbuff2, buff2,30);
-				if(strncmp(tbuff2, "NICK", 4)){
-					tb2=tb2+4;
-					write(p2sen[1], &tbuff2, sizeof(tbuff2));
-				}
-			}
-		}
-
-		//parent
-		close(p1sen[0]);
-		close(p2sen[0])
-		while(block1 == -1 || block2 ==-1){
-			block1 = read(p1[sen], &tbuff1, sizeof(tbuff1));
-
-			block2 = read(p2[sen], &tbuff2, sizeof(tbuff2));
-
-		}
-		if(block1 ==-1){
-			for(i = 0; buffer2[i] != @; i++){
-				name2[i] = buffer2[i];
-				namesize++;
-			}
-		first = 2;
-		}else{
-			for(i = 0; buffer1[i] != @; i++){
-				name1[i] = buffer1[i];
-				namesize++;
-			}
-		first = 1;
-		}
-		while(strncmp(name1,name2, namesize)){
-			if(block1 ==-1){
-				while(block1 == -1){
-					block1 = read(p1[sen], &tbuff1, sizeof(tbuff1));
-				}
-			
-			}else{
-				while(block2 == -1){
-					block2 = read(p2[sen], &tbuff2, sizeof(tbuff2));	
-				}
-			}
-			if(first = 1){
-				if(strcmp(name1, name2, namesize)){
-					
-				}
-
-			}else if(first = 2){
-
-			}
-		}
-		
-	}
-	
-	
-}
-*/
 
 int main(int argc, char *argv[]){
 	struct sockaddr_in      cliaddr, servaddr;
@@ -314,6 +221,7 @@ int main(int argc, char *argv[]){
 	int numg; //number of games to be played
 	char name1[NICKSIZE];
 	char name2[NICKSIZE];
+	char check[5];
 	
 	if(argc == 2){
 		printf("yes 1");
@@ -339,19 +247,30 @@ int main(int argc, char *argv[]){
 			close(p1rec[0]);
 			connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
 			if(isReady(conn1fd) == 0){
-				getName(conn1fd, FALSE, *p1sen[]);
+				getName(conn1fd, 0, *p1sen[]);
+				while(block1 == -1)
+					block1 = read(p1rec[0], check, sizeof(check));
+				
 			}else{
 				printf("Error with isReady()");
 			}
 
 		}
-		if (pid > 0){ //Parent
+		if (pid > 0){
 
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
 				connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
 				if(isReady(conn1fd) == 0){
-					getName(conn2fd, FALSE, *p2sen[]);
+					getName(conn2fd, 0, *p2sen[]);
+					while(block2 == -1)
+						block2=read(p2rec[0], check, sizeof(check));
+					if(check == "READY"){
+						sendDelim(conn2fd, "READY", 5, 0, 1);	
+					}else{
+						getName(conn2fd, 1, *p2sen[]);
+					}
+					   
 				}else{
 				printf("Error with isReady()");
 				}
@@ -359,17 +278,21 @@ int main(int argc, char *argv[]){
 
 			first = nameFirst(*p1sen[], *p2sen[], *name1, *name2, *nsize1, *nsize2);
 			if(first==1){
+				write(p1rec[1], "READY", sizeof("READY")); 
 				nameSecond(*p2sen[], *name2, *nsize2);
 				if(nsize2 == nsize1){
-					if(strncmp(name1, name2, nsize1)){
-						write(p1rec[1], "RETRY", sizeof("RETRY")); 
+					while(strncmp(name1, name2, nsize1)){
+						write(p2rec[1], "RETRY", sizeof("RETRY"));
+						nameSecond(*p1sen[], *name1, *nsize1);
 					}
 				}
 			}else if(first==2){
+				write(p2rec[1], "READY", sizeof("READY")); 
 				nameSecond(*p1sen[], *name1, *nsize1);
 				if(nsize2 == nsize1){
-					if(strncmp(name1, name2, nsize1)){
-						write(p2rec[1], "RETRY", sizeof("RETRY")); 
+					while(strncmp(name1, name2, nsize1)){
+						write(p1rec[1], "RETRY", sizeof("RETRY")); 
+						nameSecond(*p1sen[], *name1, *nsize1);
 					}
 				}
 			}else{
