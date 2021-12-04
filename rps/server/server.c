@@ -66,8 +66,8 @@ int strsub(char *buffer, char* to) {
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void connp(int *sockfd, int *connfd,  struct sockaddr *cliaddr, int clilen){
-	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen
+void connp(int *sockfd, int *connfd,  (struct sockaddr) *cliaddr, int clilen){
+	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen);
 	if(*connfd <0){
 			if ((errno != EINTR) || (errno != ECONNABORTED))
 				return;         // back to while() 
@@ -108,11 +108,11 @@ int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1si
 
 		}
 	if(block1 = -1){
-		name2size = read(pipe2[0], &name2, sizeof(name2));
+		block1 = read(pipe2[0], &name2size, sizeof(name2size));
 		return(2);
 	}
 	if(block2 = -1){
-		name1size = read(pipe1[0], &name1, sizeof(name1));
+		block2 = read(pipe1[0], &name1size, sizeof(name1size));
 		return(1);
 	}
 	
@@ -187,9 +187,9 @@ void getName(int *connfd, int retry, int *pipe){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void setpipe(int *pip){
-	pipe(*pip);
-	fcntl(pipe, F_SETFL, 0_NONBLOCK);
+void setPipe(int *pip){
+	pipe(&pip);
+	fcntl(pipe, F_SETFL, O_NONBLOCK);
 	return;
 }
 /*************************************************************************/
@@ -247,7 +247,7 @@ int main(int argc, char *argv[]){
 		if ( (pid1 = fork()) == 0) {      // child process made. 
 			int conn1fd;  // connection for client1
 			close(p1rec[0]);
-			connp(sockfd, conn1fd, *cliaddr, clilen); //waiting for player 1
+			connp(*sockfd, conn1fd, *cliaddr, clilen); //waiting for player 1
 			if(isReady(conn1fd) == 0){
 				getName(conn1fd, 0, *p1sen);
 				while(block1 == -1)
