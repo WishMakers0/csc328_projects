@@ -66,7 +66,7 @@ int strsub(char *buffer, char* to) {
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void connp(int *sockfd, int *connfd,  (struct sockaddr) *cliaddr, int clilen){
+void connp(int *sockfd, int *connfd,  (struct sockaddr *) cliaddr, int clilen){
 	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen);
 	if(*connfd <0){
 			if ((errno != EINTR) || (errno != ECONNABORTED))
@@ -148,7 +148,7 @@ int isReady(int *connfd){
 	char tbuff[MAX]; // The function that takes in the processed data.
 	recvFinal(connfd, buff, 0);
 	strsub(buff, tbuff);
-	return(strncmp(tbuf], "READY", 5));
+	return(strncmp(tbuf, "READY", 5));
 }
 
 /*************************************************************************/
@@ -162,16 +162,16 @@ int isReady(int *connfd){
 void getName(int *connfd, int retry, int *pipe){
 	char buff[MAX];
 	char tbuff[MAX];
-	char finbuff[MAX];
+	
 	int nsize; //size of the name
 	if(retry == 1){
-		sendDelim(connfd, "RETRY", sizeof("RETRY"), 0, 4);	
+		sendDelim(*connfd, "RETRY", sizeof("RETRY"), 0, 4);	
 		
 	}
 	recvFinal(connfd, buff, 0);
 	nsize = strsub(buff, tbuff);
 	if(strncmp(tbuff, "NICK", 4)){
-		finbuff = *tbuff[4];
+		char* finbuff = &tbuff[4];
 		write(pipe[1], &finbuff, sizeof(finbuff));
 		write(pipe[1], &size, sizeof(size));
 	}
@@ -187,9 +187,9 @@ void getName(int *connfd, int retry, int *pipe){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void setPipe(int *pip){
+void setPipe(int pip){
 	pipe(&pip);
-	fcntl(pipe, F_SETFL, O_NONBLOCK);
+	fcntl(&pip, F_SETFL, O_NONBLOCK);
 	return;
 }
 /*************************************************************************/
@@ -241,9 +241,9 @@ int main(int argc, char *argv[]){
         // accept incoming connections on any interface on the server
         servaddr.sin_addr.s_addr = INADDR_ANY;
         // accept incoming connections on specified port number, converted to network byte order
-        servaddr.sin_port        = htons(port));
-	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr));
-	while{
+        servaddr.sin_port        = htons(port);
+	bind(sockfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr));
+	while(1){
 		if ( (pid1 = fork()) == 0) {      // child process made. 
 			int conn1fd;  // connection for client1
 			close(p1rec[0]);
@@ -253,7 +253,7 @@ int main(int argc, char *argv[]){
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
-							sendDelim(conn1fd, "READY", 5, 0, 1);	
+							sendDelim(*conn1fd, "READY", 5, 0, 1);	
 						}else{
 							while(check != "READY"){
 								getName(conn1fd, 1, *p1sen);
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]){
 								while(block1 == -1)
 									block1=read(p1rec[0], &check, sizeof(check));
 							}
-							sendDelim(conn1fd, "READY", 5, 0, 1);	
+							sendDelim(*conn1fd, "READY", 5, 0, 1);	
 						}
 				
 			}else{
@@ -273,14 +273,14 @@ int main(int argc, char *argv[]){
 			int conn2fd; // connection for client2
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
-				connp(sockfd, conn2fd, *cliaddr, clilen); //waits for player 2
+				connp(sockfd, conn2fd, *cliaddr, *clilen); //waits for player 2
 				if(isReady(conn1fd) == 0){
 					getName(conn2fd, 0, *p2sen);
 					while(block2 == -1)
 						block2=read(p2rec[0], check, sizeof(check));
 					
 					if(check == "READY"){
-						sendDelim(conn2fd, "READY", 5, 0, 1);	
+						sendDelim(*conn2fd, "READY", 5, 0, 1);	
 					}else{
 						while(check != "READY"){
 							getName(conn2fd, 1, *p2sen);
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]){
 							while(block2 == -1)
 								block2=read(p2rec[0], &check, sizeof(check));
 						}
-						sendDelim(conn2fd, "READY", 5, 0, 1);	
+						sendDelim(*conn2fd, "READY", 5, 0, 1);	
 					}
 					   
 				}else{
