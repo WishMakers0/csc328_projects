@@ -83,7 +83,7 @@ void recvFinal(int *socket, char *buffer, int flags){
 	int status = recvDelim(socket, buffer, flags);
 	
 	if(status = 0){
-		return 0;	
+		return;	
 	}
 	else if (status = -1){
 		recvFinal(socket, buffer, flags);	
