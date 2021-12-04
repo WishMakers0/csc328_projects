@@ -99,7 +99,7 @@ void rpsRun(){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-int nameFirst(int *pipe1, int pipe2, char  *name1, char  *name2, char  *name1size, char  *name2size){
+int nameFirst(int[] pipe1, int[] pipe2, char  *name1, char  *name2, int  *name1size, int  *name2size){
 	int block1 = -1, block2 = -1;
 	while(block1 == -1 || block2 ==-1){
 			block1 = read(pipe1[0], &name1, sizeof(name1));
@@ -126,7 +126,7 @@ int nameFirst(int *pipe1, int pipe2, char  *name1, char  *name2, char  *name1siz
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void nameSecond(int       char  *name, char  *namesize){
+void nameSecond(int[] pipe. char *name, int  *namesize){
 	int block = -1;
 	while(block == -1){
 			block = read(pipe[0], &name, sizeof(name));
