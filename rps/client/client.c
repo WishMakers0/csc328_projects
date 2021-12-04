@@ -7,9 +7,11 @@
 	Professor Name: Dr. Frye
 	Assignment: RPS Project - Client Portion
 	Filename: client.c
-	Purpose: 
+	Purpose: Act as a client to a client-server based Rock Paper Scissors game.
+			See comment on main for further implementation details.
 
-	Run command: ./client.out <ip_address> <port num>
+	Run command: ./client.out <ip_address> <port num*>
+			*optional argument, defaults to 1024
 	Compile command: 
 		make build_client
         *OR*
@@ -32,6 +34,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <errno.h>
+#include <netdb.h>
 #include "Library.h"
 
 //preprocessor defines
@@ -47,26 +50,26 @@ typedef enum MessageType { Ready=1, Go=2, Nick=3, Retry=4, RPS=5, Score=8, Stop=
 
 /*
 Function name: finalDisplay
-Description: 
+Description: Displays score to the user after Score packet is received
 
-Parameters: 
-Return value: 
+Parameters: char* buffer - string buffer to display
+Return value: N/A
 */
 void finalDisplay(char* buffer) {
 	//Process copy buffer from processed message to display final score results.
-	//example packet: SCORE
-	
-	//wait until later
+	//example packet: SCORE ?????
+	printf("Display placeholder because who the [EXPLETIVE] knows what the Score packets look like yet. \n");
 }
 
 /*
 Function name: getTrueMessageLength
-Description: 
-
+Description: Gets the substring of a packet received from a server, removing the header and delimiter
+			(Fun fact: the version used in server.c's "substr" function is just a more elegant version of this and what is done in parseMessage.)
+			(Doubly fun fact: it works so well that I'll just replace this function with that one altogether.)
 Parameters: char* buffer - the received full message
 
 Return value: int length - the length of the "true" message within an encoded packet
-*/
+
 
 int getTrueMessageLength(char* buffer) {
 	//first two characters are always , followed by a number for the type - start indexing at 2
@@ -81,11 +84,36 @@ int getTrueMessageLength(char* buffer) {
 		}
 	}
 	return length;
+}*/
+
+/*
+Function name: strsub
+Description: 
+    Gets a substring from our packet format (ignores the comma, message type, and delimiter)
+
+Parameters: char* buffer -  original string
+            char* to - where to put the substring
+Return value: int - size of the substring
+*/
+int strsub(char *buffer, char* to) {
+    char* start = &buffer[2];
+    int length = 0;
+    char* i = start;
+    while(!((*i == '@') || (length > 253))) { //pointer arithmetic, fun
+        length++; i++;
+    }
+    if (length > 253) {
+        //error: out of bounds write?  improperly formatted packet?  either way something's wrong
+    }
+    strncpy(to, start, length);
+    return length;
 }
 
 /*
 Function name: parseMessage
-Description: 
+Description: Handles any received packet from the server and parses it to perform the appropriate action.
+			For most packet types, all it needs to do is verify the packet matches the expected result.
+			For others like Score packets, it provides the way for the message to be displayed to the screen.
 
 Parameters: char* buffer - the received message to translate
 			MessageType type - the message type to check for
@@ -111,8 +139,9 @@ bool parseMessage(char* buffer, MessageType type) {
 	}
 
 	//Copy "true message" to copyBuffer to strcmp with the expected message.
-	int messageLength = getTrueMessageLength(buffer);
-	strncpy(copyBuffer, &buffer[2], messageLength);
+	//int messageLength = getTrueMessageLength(buffer);
+	//strncpy(copyBuffer, &buffer[2], messageLength);
+	int messageLength = strsub(buffer, copyBuffer);
 
 	//Switch statement for different message types.
 	switch(type) {
@@ -168,20 +197,48 @@ Parameters: int* sock - socket file descriptor //could be replaced with int?
 Return value: 
 */
 void recvWrap(int sock, char* buffer, MessageType type, size_t length) {
-	recvDelim(sock, buffer, 0);
+	recvFinal(sock, buffer, 0);
 	if(!parseMessage(buffer, type)) {
 		//see Note 1
 	}
 }
 
+
+/*
+Function name: hostnameIpConvert
+Description: Converts hostname of website to an IP.  (Oh, we need to do this, I was just going to use an IP when testing...)
+
+Parameters: char* buffer - ip address buffer
+			int sock - socket file descriptor
+			struct sockaddr_in* server_addr - socket server address information
+Return value: N/A
+*/
+void hostnameIpConvert(char* buffer, int sock, struct serveraddr_in* server_addr) {
+	struct addrinfo hints, *res, *it;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	if (getaddrinfo(buffer, "http", &hints, &res) != 0) {
+		//error message?
+	}
+
+	//for(it = res; it != NULL, it=it->ai_next) {}
+	server_addr->sin_addr = res->ai_info->sin_addr;
+	//get first IP address and place it in server_addr
+
+	freeaddrinfo(res); //free this structure
+}
+
 /*
 Function name: establishConnection
-Description: 
+Description: The first part of the client process, creates the socket, connects, and sends the first READY message to the server.
 
-Parameters: char* ip - ip address specified
+Parameters: char* ip - hostname specified (previously ip address!)
 			int port - port number specified
-			int* socket - pointer to socket int
-Return value: 
+			int* socket - pointer to socket file descriptor
+			struct sockaddr_in* server_addr - socket server address information
+			char* buffer - generic string buffer
+Return value: int - status of connection, -1 if failed, 0 if success
 */
 int establishConnections(char* ip, int port, int* sock, struct sockaddr_in* server_addr, char* buffer) {
 	*sock = socket(AF_INET, SOCK_STREAM, 0); //establish socket file descriptor
@@ -189,7 +246,8 @@ int establishConnections(char* ip, int port, int* sock, struct sockaddr_in* serv
 	//create memory and initialize sockaddr
 	memset(server_addr, 0, sizeof(struct sockaddr));
 	server_addr->sin_family = AF_INET;
-    server_addr->sin_addr.s_addr = inet_addr(ip);
+	hostnameIpConvert(ip, *sock, server_addr); //convert hostname to IP address
+	//inet_aton(ip, server_addr->sin_addr.s_addr); //use with only an ip address!!
     server_addr->sin_port = htons(port);
 
 	//binds the host socket
@@ -197,22 +255,25 @@ int establishConnections(char* ip, int port, int* sock, struct sockaddr_in* serv
 	
 	//connects to server socket
 	if (connect(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in)) != 0) {
-		//error!
+		//error connecting to server!
+		print("Couldn't connect to server, aborting. \n");
 		return -1;
 	}
 
 	sendDelim(*sock, "READY", 5, 0, Ready);
-	printf("Connection with server successful.  Waiting for server response...");
-	recvWrap(*sock, buffer, 8, Ready);
+	//printf("Connection with server successful.  Waiting for server response...");
+	//recvWrap(*sock, buffer, 8, Ready);
 	return 0;
 }
 
 /*
 Function name: nameEntry
-Description: 
-
-Parameters: 
-Return value: 
+Description: Second major part of the client process, handling nickname entry.
+			Ensures proper ranges for character length, and handles banned characters (ones used in packet processing).
+Parameters: char* nick - nickname buffer
+			char* buffer - general string buffer
+			int sock - socket file descriptor
+Return value: N/A
 */
 
 void nameEntry(char* nick, char* buffer, int sock) {
@@ -238,7 +299,8 @@ void nameEntry(char* nick, char* buffer, int sock) {
 
 		//Waits for server response
 		printf("Waiting for server...");
-		recvDelim(sock, buffer, 0);
+		//blocking fxn here necessary?  probably not.
+		recvFinal(sock, buffer, 0);
 		if(parseMessage(buffer, Ready)) {
 			confirm = true;
 			printf("Nickname approved.  Waiting for opponent...\n");
@@ -253,45 +315,75 @@ void nameEntry(char* nick, char* buffer, int sock) {
 	}
 }
 
-/*
-Function name: awaitGo
-Description: 
-
-Parameters: 
-Return value: 
-*/
-
-void awaitGo(int sock, char* buffer) {
-	//wait logic
-	recvWrap(sock, buffer, 5, Go);
-}
 
 /*
 Function name: rpsGameplay
-Description: 
-
-Parameters: 
-Return value: 
+Description: Third major part of the client - the actual RPS inputs from the user
+			Verifies that the string input is "close enough" to ROCK, PAPER, or SCISSORS and sets it to a valid value.
+			Sends the packet to the server afterward.
+Parameters: int sock - socket file descriptor
+			char* buffer - generic string buffer
+Return value: N/A
 */
 
 void rpsGameplay(int sock,char* buffer) {
-	printf("ROSHAMBO!\nEnter your choice here between the CAPS options: \nROCK, PAPER, SCISSORS, shoot! -> ");
-	fgets(buffer, 8, stdin);
+	bool valid = false; 
+	char choice[9];
+	memset(&choice[0], 0, 9); //clear choice buffer
+	while(!valid) {
+		printf("ROSHAMBO!\nEnter your choice here between the CAPS options: \nROCK, PAPER, SCISSORS, shoot! -> ");
+		fgets(buffer, 9, stdin);
+		switch(buffer[0]) {
+			//I did not care enough to use strcmp for this...
+			case('R'):
+				strcpy(choice, "ROCK");
+				valid = true;
+				printf("ROCK chosen! \n");
+			case('S'):
+				strcpy(choice, "SCISSORS");
+				valid = true;
+				printf("SCISSORS chosen! \n");
+				break;
+			case('P'):
+				strcpy(choice, "PAPER");
+				valid = true;
+				printf("PAPER chosen! \n");
+				break;
+			case('r'):
+				strcpy(choice, "ROCK");
+				valid = true;
+				printf("ROCK chosen! \n");
+			case('s'):
+				strcpy(choice, "SCISSORS");
+				valid = true;
+				printf("SCISSORS chosen! \n");
+				break;
+			case('p'):
+				strcpy(choice, "PAPER");
+				valid = true;
+				printf("PAPER chosen! \n");
+				break;
+			default:
+				printf("Invalid entry, try again. \n");
+				break;
+		}
+	}
 	printf("Sending to server... Awaiting response... ");
-	sendDelim(sock, buffer, NICKBUFFER, 0, RPS);
+	sendDelim(sock, buffer, 8, 0, RPS);
 }
 
 /*
 Function name: awaitLoop
-Description: 
-
-Parameters: 
-Return value: 
+Description: Other part of RPS gameplay, waits for a packet from the server and evaluates whether to continue game loop or stop,
+			based on the resulting packet.
+Parameters: int sock - socket file descriptor
+			char* buffer - generic string buffer
+Return value: bool - true to continue looping, false to break loop
 */
 
 bool awaitLoop(int sock, char* buffer) {
 	bool result;
-	recvDelim(sock, buffer, 0); //Problem: length doesn't match...!!!
+	recvFinal(sock, buffer, 0); //Problem: length doesn't match...!!!
 	if(parseMessage(buffer, Go)) {
 		result = false;
 	}
@@ -306,15 +398,18 @@ bool awaitLoop(int sock, char* buffer) {
 
 /*
 Function name: gameOverRoutine
-Description: 
+Description: Final part of client.  Receives Stop packet from server and closes socket.
 
-Parameters: 
-Return value: 
+Parameters: int sock - socket file descriptor
+			char* buffer - generic string buffer
+Return value: N/A
 */
 
 void gameOverRoutine(int sock, char* buffer) {
 	recvWrap(sock, buffer, 7, Stop);
-
+	//terminate connection formally
+	close(sock);
+	printf("Connection with server finished, terminating. \n");
 }
 
 /*
@@ -388,18 +483,16 @@ int main(int argc, char* argv[]) {
 
 	//Wait for Go message to be received and verified, then proceed with Roshambo
 	//Game loop begins here
-	awaitGo(sock, buffer);
+	recvWrap(sock, buffer, 5, Go);
 	while(!gameFinished) {
-		//rpsGameplay();
+		rpsGameplay(sock, buffer);
 		gameFinished = awaitLoop(sock, buffer);
 	}
 
 	//Wait for a stop message to ensure connection termination, then terminate
 	gameOverRoutine(sock, buffer);
-	
-	//terminate connection formally??  how??
-	close(sock);
-	printf("Well at least it compiles! \n");
+
+	//printf("Well at least it compiles! \n");
 
 	return 0;
 }
