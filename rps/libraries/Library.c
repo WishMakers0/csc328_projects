@@ -28,7 +28,7 @@ return;
 }
 
 
-int sendDelim(int sockfd, char *buffer, size_t length, int flags, int messageType){
+int sendDelim(int *sockfd, char *buffer, size_t length, int flags, int messageType){
     char truemessage[length + 3];
     int looper;
     int err;
@@ -49,7 +49,7 @@ int sendDelim(int sockfd, char *buffer, size_t length, int flags, int messageTyp
     return 0;
 }
 
-int recvDelim(int socket, char *buffer, int flags){
+int recvDelim(int *socket, char *buffer, int flags){
     int err;
     int attempts;
     char errRcv[22] = "Error: Receive failed";
@@ -79,7 +79,7 @@ int recvDelim(int socket, char *buffer, int flags){
     
 }
 
-void recvFinal(int socket, char *buffer, int flags){
+void recvFinal(int *socket, char *buffer, int flags){
 	int status = recvDelim(socket, buffer, flags);
 	
 	if(status = 0){
