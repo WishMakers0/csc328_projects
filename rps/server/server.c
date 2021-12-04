@@ -127,8 +127,9 @@ int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1si
 /*                                                                       */
 /*************************************************************************/
 void nameSecond(int *pipe, char  *name, char  *namesize){
+	int block = -1
 	while(block == -1){
-			block = read(pipe[0], &name, sizeof(tbuff));
+			block = read(pipe[0], &name, sizeof(name);
 		}
 	read(pipe[0], &namesize, sizeof(namesize));
 }
@@ -250,6 +251,17 @@ int main(int argc, char *argv[]){
 				getName(conn1fd, 0, *p1sen[]);
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
+					if(check == "READY"){
+							sendDelim(conn1fd, "READY", 5, 0, 1);	
+						}else{
+							while(check != "READY"){
+								getName(conn1fd, 1, *p1sen[]);
+								block1 = -1;
+								while(block1 == -1)
+									block1=read(p1rec[0], check, sizeof(check));
+							}
+							sendDelim(conn1fd, "READY", 5, 0, 1);	
+						}
 				
 			}else{
 				printf("Error with isReady()");
@@ -265,10 +277,17 @@ int main(int argc, char *argv[]){
 					getName(conn2fd, 0, *p2sen[]);
 					while(block2 == -1)
 						block2=read(p2rec[0], check, sizeof(check));
+					
 					if(check == "READY"){
 						sendDelim(conn2fd, "READY", 5, 0, 1);	
 					}else{
-						getName(conn2fd, 1, *p2sen[]);
+						while(check != "READY"){
+							getName(conn2fd, 1, *p2sen[]);
+							block2 = -1;
+							while(block2 == -1)
+								block2=read(p2rec[0], check, sizeof(check));
+						}
+						sendDelim(conn2fd, "READY", 5, 0, 1);	
 					}
 					   
 				}else{
@@ -280,21 +299,21 @@ int main(int argc, char *argv[]){
 			if(first==1){
 				write(p1rec[1], "READY", sizeof("READY")); 
 				nameSecond(*p2sen[], *name2, *nsize2);
-				if(nsize2 == nsize1){
-					while(strncmp(name1, name2, nsize1)){
-						write(p2rec[1], "RETRY", sizeof("RETRY"));
-						nameSecond(*p1sen[], *name1, *nsize1);
-					}
+				
+				while(strncmp(name1, name2, nsize1)||nsize2 == nsize1){
+					write(p2rec[1], "RETRY", sizeof("RETRY"));
+					nameSecond(*p1sen[], *name1, *nsize1);
 				}
+				
 			}else if(first==2){
 				write(p2rec[1], "READY", sizeof("READY")); 
 				nameSecond(*p1sen[], *name1, *nsize1);
-				if(nsize2 == nsize1){
-					while(strncmp(name1, name2, nsize1)){
-						write(p1rec[1], "RETRY", sizeof("RETRY")); 
-						nameSecond(*p1sen[], *name1, *nsize1);
-					}
+				
+				while(strncmp(name1, name2, nsize1) || nsize2 == nsize1){
+					write(p1rec[1], "RETRY", sizeof("RETRY")); 
+					nameSecond(*p1sen[], *name1, *nsize1);
 				}
+				
 			}else{
 			printf("error with nameFirst");	
 			}
