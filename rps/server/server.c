@@ -66,7 +66,7 @@ int strsub(char *buffer, char* to) {
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void connp(int *sockfd, int *connfd,  sockaddr *cliaddr, int clilen){
+void connp(int *sockfd, int *connfd, struct sockaddr *cliaddr, int clilen){
 	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen);
 	if(*connfd <0){
 			if ((errno != EINTR) || (errno != ECONNABORTED))
@@ -146,7 +146,7 @@ void nameSecond(int *pipe, char  *name, char  *namesize){
 int isReady(int *connfd){
 	char buff[MAX];  //Buffer where the message is originally sent.
 	char tbuff[MAX]; // The function that takes in the processed data.
-	recvFinal(&connfd, buff, 0);
+	recvFinal(*connfd, buff, 0);
 	strsub(buff, tbuff);
 	return(strncmp(tbuf, "READY", 5));
 }
