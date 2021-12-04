@@ -249,7 +249,7 @@ int main(int argc, char *argv[]){
 			close(p1rec[0]);
 			connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
 			if(isReady(&conn1fd) == 0){
-				getName(&conn1fd, 0, p1sen[2]
+				getName(&conn1fd, 0, p1sen[2]);
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
