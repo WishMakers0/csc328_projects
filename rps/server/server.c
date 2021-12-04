@@ -67,7 +67,7 @@ int strsub(char *buffer, char* to) {
 /*                                                                       */
 /*************************************************************************/
 void connp(int sockfd, int connfd, struct sockaddr_in cliaddr, int clilen){
-	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen);
+	connfd = accept(sockfd, (struct sockaddr *) &cliaddr, &clilen);
 	if(*connfd <0){
 			if ((errno != EINTR) || (errno != ECONNABORTED))
 				return;         // back to while() 
@@ -99,7 +99,7 @@ void rpsRun(){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1size, char  *name2size){
+int nameFirst(int *pipe1, int pipe2, char  *name1, char  *name2, char  *name1size, char  *name2size){
 	int block1 = -1, block2 = -1;
 	while(block1 == -1 || block2 ==-1){
 			block1 = read(pipe1[0], &name1, sizeof(name1));
@@ -126,7 +126,7 @@ int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1si
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void nameSecond(int *pipe, char  *name, char  *namesize){
+void nameSecond(int       char  *name, char  *namesize){
 	int block = -1;
 	while(block == -1){
 			block = read(pipe[0], &name, sizeof(name));
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]){
 			close(p1rec[0]);
 			connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
 			if(isReady(&conn1fd) == 0){
-				getName(&conn1fd, 0, p1sen);
+				getName(&conn1fd, 0, p1sen[2]
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
