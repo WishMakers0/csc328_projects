@@ -253,15 +253,15 @@ int main(int argc, char *argv[]){
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
-							sendDelim(*conn1fd, "READY", 5, 0, 1);	
+							sendDelim(&conn1fd, "READY", 5, 0, 1);	
 						}else{
 							while(check != "READY"){
-								getName(&conn1fd, 1, p1sen);
+								getName(&conn1fd, 1, p1sen[2]);
 								block1 = -1;
 								while(block1 == -1)
 									block1=read(p1rec[0], &check, sizeof(check));
 							}
-							sendDelim(*conn1fd, "READY", 5, 0, 1);	
+							sendDelim(&conn1fd, "READY", 5, 0, 1);	
 						}
 				
 			}else{
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]){
 				close(p2rec[0]);
 				connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
 				if(isReady(&conn1fd) == 0){
-					getName(&conn2fd, 0, p2sen);
+					getName(&conn2fd, 0, p2sen[2]);
 					while(block2 == -1)
 						block2=read(p2rec[0], check, sizeof(check));
 					
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]){
 						sendDelim(&conn2fd, "READY", 5, 0, 1);	
 					}else{
 						while(check != "READY"){
-							getName(&conn2fd, 1, p2sen);
+							getName(&conn2fd, 1, p2sen[2]);
 							block2 = -1;
 							while(block2 == -1)
 								block2=read(p2rec[0], &check, sizeof(check));
@@ -296,23 +296,23 @@ int main(int argc, char *argv[]){
 				}
 			}//START OF PARENT
 
-			first = nameFirst(*p1sen, *p2sen, *name1, *name2, *nsize1, *nsize2);
+			first = nameFirst(p1sen[2], p2sen[2], *name1, *name2, *nsize1, *nsize2);
 			if(first==1){
 				write(p1rec[1], "READY", sizeof("READY")); 
-				nameSecond(*p2sen, *name2, *nsize2);
+				nameSecond(p2sen[2], *name2, *nsize2);
 				
 				while(strncmp(name1, name2, nsize1)||nsize2 == nsize1){
 					write(p2rec[1], "RETRY", sizeof("RETRY"));
-					nameSecond(*p1sen, *name1, *nsize1);
+					nameSecond(p1sen[2], *name1, *nsize1);
 				}
 				
 			}else if(first==2){
 				write(p2rec[1], "READY", sizeof("READY")); 
-				nameSecond(*p1sen, *name1, *nsize1);
+				nameSecond(p1sen[2], *name1, *nsize1);
 				
 				while(strncmp(name1, name2, nsize1) || nsize2 == nsize1){
 					write(p1rec[1], "RETRY", sizeof("RETRY")); 
-					nameSecond(*p1sen, *name1, *nsize1);
+					nameSecond(p1sen[2], *name1, *nsize1);
 				}
 				
 			}else{
