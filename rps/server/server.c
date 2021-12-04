@@ -99,7 +99,7 @@ void rpsRun(){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-int nameFirst(int *pipe1, int *pipe2[], char  *name1, char  *name2, char  *name1size, char  *name2size){
+int nameFirst(int *pipe1[], int *pipe2[], char  *name1, char  *name2, char  *name1size, char  *name2size){
 	while(block1 == -1 || block2 ==-1){
 			block1 = read(pipe1[0], &name1, sizeof(tbuff1));
 
@@ -107,14 +107,29 @@ int nameFirst(int *pipe1, int *pipe2[], char  *name1, char  *name2, char  *name1
 
 		}
 	if(block1 = -1){
-		name2size = read(pipe2[0], &name2, sizeof(tbuff2));
+		name2size = read(pipe2[0], &name2, sizeof(name2));
 		return(2);
 	}
 	if(block2 = -1){
-		name1size = read(pipe1[0], &name1, sizeof(tbuff1));
+		name1size = read(pipe1[0], &name1, sizeof(name1));
 		return(1);
 	}
 	
+}
+
+/*************************************************************************/
+/* 									 */
+/* Function name: nameSecond                                            */                           
+/* Description: takes in the second name for comparison                 */
+/* Parameters:                                                           */
+/* Return Value: none                                                    */
+/*                                                                       */
+/*************************************************************************/
+void nameSecond(int *pipe[], char  *name, char  *namesize){
+	while(block == -1){
+			block = read(pipe[0], &name, sizeof(tbuff));
+		}
+	read(pipe[0], &namesize, sizeof(namesize));
 }
 
 
@@ -295,6 +310,7 @@ int main(int argc, char *argv[]){
 	int nsize1, nsize2; //starting name size
 	int block1= -1, block2 = -1; //needed for non blocking run of read. 
 	int first; //will be set to either 1 or 2 depending on who typed name first.
+	int numg; //number of games to be played
 	char name1[NICKSIZE];
 	char name2[NICKSIZE];
 
@@ -315,7 +331,7 @@ int main(int argc, char *argv[]){
         servaddr.sin_addr.s_addr = INADDR_ANY;
         // accept incoming connections on specified port number, converted to network byte order
         servaddr.sin_port        = htons(port));
-	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr))
+	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr));
 	
 	if ( (pid1 = fork()) == 0) {      // child process made. 
 		
@@ -340,32 +356,27 @@ int main(int argc, char *argv[]){
 			}
 		}//START OF PARENT
 			
-		first = nameFirst(*p1sen[], *p2sen[], name1, name2, nsize1, nsize2);
+		first = nameFirst(*p1sen[], *p2sen[], *name1, *name2, *nsize1, *nsize2);
 		if(first==1){
-			
+			nameSecond(*p2sen[], *name2, *nsize2);
 		}else if(first==2){
-			
+			nameSecond(*p1sen[], *name1, *nsize1);
 		}else{
 		printf("error with nameFirst")	
 		}
 		
-		close(sockfd);        //close listening socket; only with child 
+		close(sockfd);        //close listening socket; 
 		close(pfd1[1]);
 		close(pfd2[1]);
-		//setup match here.
 		
 		
-		//NOTE: NEED WAY TO PROCESS THE BUFFER TO GET THE RAW MESSAGE
-		nickCheck();
-		
-			rpsRun(connfd, conn2fd);
-		}
+				
 		close(connfd);     
 		close(conn2fd);
 		exit(0);
-	  }  // end if: child process
 	
-		}
+	
+		
 	}
 	
 	
