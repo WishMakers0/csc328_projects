@@ -95,11 +95,11 @@ void rpsRun(){
 /* 									 */
 /* Function name: nameFirst                                              */                           
 /* Description: recieves names form child based on which one is first    */
-/* Parameters:                                                           */
-/* Return Value: none                                                    */
+/* Parameters:  pipe- the name                                           */
+/* Return Value: returns which was first                                 */
 /*                                                                       */
 /*************************************************************************/
-int nameFirst(int[] pipe1, int[] pipe2, char  *name1, char  *name2, int  *name1size, int  *name2size){
+int nameFirst(int pipe1[], int pipe2[], char  *name1, char  *name2, int  name1size, int  name2size){
 	int block1 = -1, block2 = -1;
 	while(block1 == -1 || block2 ==-1){
 			block1 = read(pipe1[0], &name1, sizeof(name1));
@@ -126,7 +126,7 @@ int nameFirst(int[] pipe1, int[] pipe2, char  *name1, char  *name2, int  *name1s
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void nameSecond(int[] pipe. char *name, int  *namesize){
+void nameSecond(int pipe[], char *name, int  *namesize){
 	int block = -1;
 	while(block == -1){
 			block = read(pipe[0], &name, sizeof(name));
@@ -140,7 +140,7 @@ void nameSecond(int[] pipe. char *name, int  *namesize){
 /* Function name: isReady                                                */                                
 /* Description: if ready, returns true                                   */
 /* Parameters:                                                           */
-/* Return Value: none                                                    */
+/* Return Value: retruns  num based on strncmp                           */
 /*                                                                       */
 /*************************************************************************/
 int isReady(int *connfd){
@@ -165,7 +165,7 @@ void getName(int *connfd, int retry, int pipe){
 	
 	int nsize; //size of the name
 	if(retry == 1){
-		sendDelim(*connfd, "RETRY", sizeof("RETRY"), 0, 4);	
+		sendDelim(connfd, "RETRY", sizeof("RETRY"), 0, 4);	
 		
 	}
 	recvFinal(*connfd, buff, 0);
@@ -253,7 +253,7 @@ int main(int argc, char *argv[]){
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
-							sendDelim(&conn1fd, "READY", 5, 0, 1);	
+							sendDelim(conn1fd, "READY", 5, 0, 1);	
 						}else{
 							while(check != "READY"){
 								getName(&conn1fd, 1, p1sen[2]);
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]){
 								while(block1 == -1)
 									block1=read(p1rec[0], &check, sizeof(check));
 							}
-							sendDelim(&conn1fd, "READY", 5, 0, 1);	
+							sendDelim(conn1fd, "READY", 5, 0, 1);	
 						}
 				
 			}else{
@@ -280,7 +280,7 @@ int main(int argc, char *argv[]){
 						block2=read(p2rec[0], check, sizeof(check));
 					
 					if(check == "READY"){
-						sendDelim(&conn2fd, "READY", 5, 0, 1);	
+						sendDelim(conn2fd, "READY", 5, 0, 1);	
 					}else{
 						while(check != "READY"){
 							getName(&conn2fd, 1, p2sen[2]);
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]){
 							while(block2 == -1)
 								block2=read(p2rec[0], &check, sizeof(check));
 						}
-						sendDelim(&conn2fd, "READY", 5, 0, 1);	
+						sendDelim(conn2fd, "READY", 5, 0, 1);	
 					}
 					   
 				}else{
@@ -296,14 +296,14 @@ int main(int argc, char *argv[]){
 				}
 			}//START OF PARENT
 
-			first = nameFirst(p1sen[2], p2sen[2], *name1, *name2, *nsize1, *nsize2);
+			first = nameFirst(p1sen[2], p2sen[2], *name1, *name2, nsize1, *size2);
 			if(first==1){
 				write(p1rec[1], "READY", sizeof("READY")); 
-				nameSecond(p2sen[2], *name2, *nsize2);
+				nameSecond(p2sen[2], *name2, nsize2);
 				
 				while(strncmp(name1, name2, nsize1)||nsize2 == nsize1){
 					write(p2rec[1], "RETRY", sizeof("RETRY"));
-					nameSecond(p1sen[2], *name1, *nsize1);
+					nameSecond(p1sen[2], *name1, nsize1);
 				}
 				
 			}else if(first==2){
@@ -312,7 +312,7 @@ int main(int argc, char *argv[]){
 				
 				while(strncmp(name1, name2, nsize1) || nsize2 == nsize1){
 					write(p1rec[1], "RETRY", sizeof("RETRY")); 
-					nameSecond(p1sen[2], *name1, *nsize1);
+					nameSecond(p1sen[2], *name1, nsize1);
 				}
 				
 			}else{
