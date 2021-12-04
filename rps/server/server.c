@@ -66,7 +66,7 @@ int strsub(char *buffer, char* to) {
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void connp(int *sockfd, int *connfd, struct sockaddr *cliaddr, int clilen){
+void connp(int sockfd, int connfd, struct sockaddr_in cliaddr, int clilen){
 	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen);
 	if(*connfd <0){
 			if ((errno != EINTR) || (errno != ECONNABORTED))
@@ -173,7 +173,7 @@ void getName(int *connfd, int retry, int pipe){
 	if(strncmp(tbuff, "NICK", 4)){
 		char* finbuff = &tbuff[4];
 		write(pipe[1], &finbuff, sizeof(finbuff));
-		write(pipe[1], &nsize, sizeof(size));
+		write(pipe[1], &nsize, sizeof(nsize));
 	}
 	return;
 	
@@ -187,7 +187,7 @@ void getName(int *connfd, int retry, int pipe){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void setPipe(int *pip){
+void setPipe(int pip){
 	pipe(&pip);
 	fcntl(*pip, F_SETFL, O_NONBLOCK);
 	return;
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]){
 		
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
-				connp(sockfd, conn2fd, *cliaddr, *clilen); //waits for player 2
+				connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
 				if(isReady(&conn1fd) == 0){
 					getName(&conn2fd, 0, p2sen);
 					while(block2 == -1)
