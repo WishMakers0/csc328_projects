@@ -245,7 +245,7 @@ int main(int argc, char *argv[]){
 	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr));
 	while{
 		if ( (pid1 = fork()) == 0) {      // child process made. 
-
+			int conn1fd;  // connection for client1
 			close(p1rec[0]);
 			connp(sockfd, conn1fd, *cliaddr, clilen); //waiting for player 1
 			if(isReady(conn1fd) == 0){
@@ -270,7 +270,7 @@ int main(int argc, char *argv[]){
 
 		}
 		if (pid > 0){
-
+			int conn2fd; // connection for client2
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
 				connp(sockfd, conn2fd, *cliaddr, clilen); //waits for player 2
