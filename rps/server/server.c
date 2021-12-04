@@ -66,7 +66,7 @@ int strsub(char *buffer, char* to) {
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void connp(int *sockfd, int *connfd,  (struct sockaddr *) cliaddr, int clilen){
+void connp(int *sockfd, int *connfd,  sockaddr *cliaddr, int clilen){
 	*connfd = accept(*sockfd, (struct sockaddr *) &cliaddr, &clilen);
 	if(*connfd <0){
 			if ((errno != EINTR) || (errno != ECONNABORTED))
@@ -127,7 +127,7 @@ int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1si
 /*                                                                       */
 /*************************************************************************/
 void nameSecond(int *pipe, char  *name, char  *namesize){
-	int block = -1
+	int block = -1;
 	while(block == -1){
 			block = read(pipe[0], &name, sizeof(name);
 		}
@@ -146,7 +146,7 @@ void nameSecond(int *pipe, char  *name, char  *namesize){
 int isReady(int *connfd){
 	char buff[MAX];  //Buffer where the message is originally sent.
 	char tbuff[MAX]; // The function that takes in the processed data.
-	recvFinal(connfd, buff, 0);
+	recvFinal(&connfd, buff, 0);
 	strsub(buff, tbuff);
 	return(strncmp(tbuf, "READY", 5));
 }
@@ -165,10 +165,10 @@ void getName(int *connfd, int retry, int *pipe){
 	
 	int nsize; //size of the name
 	if(retry == 1){
-		sendDelim(*connfd, "RETRY", sizeof("RETRY"), 0, 4);	
+		sendDelim(&connfd, "RETRY", sizeof("RETRY"), 0, 4);	
 		
 	}
-	recvFinal(connfd, buff, 0);
+	recvFinal(&connfd, buff, 0);
 	nsize = strsub(buff, tbuff);
 	if(strncmp(tbuff, "NICK", 4)){
 		char* finbuff = &tbuff[4];
@@ -203,7 +203,7 @@ void setPipe(int pip){
 
 int main(int argc, char *argv[]){
 	struct sockaddr_in      cliaddr, servaddr;
-	int sockfd;
+	int sockfd, conn1fd, conn2fd; //declaration of sockets
 	int port;
 	sockfd = socket(AF_INET, SOCK_STREAM,0);
 	int p1sen[2];
@@ -245,7 +245,7 @@ int main(int argc, char *argv[]){
 	bind(sockfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr));
 	while(1){
 		if ( (pid1 = fork()) == 0) {      // child process made. 
-			int conn1fd;  // connection for client1
+			
 			close(p1rec[0]);
 			connp(*sockfd, conn1fd, *cliaddr, clilen); //waiting for player 1
 			if(isReady(conn1fd) == 0){
@@ -253,7 +253,7 @@ int main(int argc, char *argv[]){
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
-							sendDelim(*conn1fd, "READY", 5, 0, 1);	
+							sendDelim(&conn1fd, "READY", 5, 0, 1);	
 						}else{
 							while(check != "READY"){
 								getName(conn1fd, 1, *p1sen);
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]){
 								while(block1 == -1)
 									block1=read(p1rec[0], &check, sizeof(check));
 							}
-							sendDelim(*conn1fd, "READY", 5, 0, 1);	
+							sendDelim(&conn1fd, "READY", 5, 0, 1);	
 						}
 				
 			}else{
@@ -270,7 +270,7 @@ int main(int argc, char *argv[]){
 
 		}
 		if (pid > 0){
-			int conn2fd; // connection for client2
+		
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
 				connp(sockfd, conn2fd, *cliaddr, *clilen); //waits for player 2
@@ -280,7 +280,7 @@ int main(int argc, char *argv[]){
 						block2=read(p2rec[0], check, sizeof(check));
 					
 					if(check == "READY"){
-						sendDelim(*conn2fd, "READY", 5, 0, 1);	
+						sendDelim(&conn2fd, "READY", 5, 0, 1);	
 					}else{
 						while(check != "READY"){
 							getName(conn2fd, 1, *p2sen);
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]){
 							while(block2 == -1)
 								block2=read(p2rec[0], &check, sizeof(check));
 						}
-						sendDelim(*conn2fd, "READY", 5, 0, 1);	
+						sendDelim(&conn2fd, "READY", 5, 0, 1);	
 					}
 					   
 				}else{
