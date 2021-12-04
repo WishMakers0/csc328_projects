@@ -23,7 +23,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <unistd.h>
-//#include "lib.h"
+#include <fcntl.h>
+#include "Library.h"
 
 #define LISTENQ   1024
 #define MAX   256
@@ -67,11 +68,10 @@ int strsub(char *buffer, char* to) {
 /*************************************************************************/
 void connp(int *sockfd, int *connfd,  struct sockaddr *cliaddr, int clilen){
 
-	if( (connfd = accept(sockfd, (struct sockaddr *) &cliaddr, &clilen)) <0){
+	if( (*connfd = accept(sockfd, (struct sockaddr *) &cliaddr, &clilen)) <0){
 			if ((errno == EINTR) || (errno == ECONNABORTED))
 				continue;         // back to while() 
-			 else
-	      {
+			 else{
 		perror("accept error");
 		exit(-1);   // possibly change to continue, depends on functionality. 
 	      }   // end else
@@ -99,19 +99,20 @@ void rpsRun(){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-int nameFirst(int *pipe1[], int *pipe2[], char  *name1, char  *name2, char  *name1size, char  *name2size){
+int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1size, char  *name2size){
+	int block1 = -1, block2 = -1;
 	while(block1 == -1 || block2 ==-1){
-			block1 = read(pipe1[0], &name1, sizeof(tbuff1));
+			block1 = read(*pipe1[0], *name1, sizeof(name1));
 
-			block2 = read(pipe2[0], &name2, sizeof(tbuff2));
+			block2 = read(*pipe2[0], *name2, sizeof(name2));
 
 		}
 	if(block1 = -1){
-		name2size = read(pipe2[0], &name2, sizeof(name2));
+		name2size = read(*pipe2[0], *name2, sizeof(name2));
 		return(2);
 	}
 	if(block2 = -1){
-		name1size = read(pipe1[0], &name1, sizeof(name1));
+		name1size = read(*pipe1[0], *name1, sizeof(name1));
 		return(1);
 	}
 	
@@ -125,7 +126,7 @@ int nameFirst(int *pipe1[], int *pipe2[], char  *name1, char  *name2, char  *nam
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void nameSecond(int *pipe[], char  *name, char  *namesize){
+void nameSecond(int *pipe, char  *name, char  *namesize){
 	while(block == -1){
 			block = read(pipe[0], &name, sizeof(tbuff));
 		}
@@ -141,7 +142,7 @@ void nameSecond(int *pipe[], char  *name, char  *namesize){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-bool isReady(int *connfd){
+int isReady(int *connfd){
 	char buff[MAX];  //Buffer where the message is originally sent.
 	char tbuff[MAX]; // The function that takes in the processed data.
 	recvFinal(connfd, buff, 0);
@@ -157,7 +158,7 @@ bool isReady(int *connfd){
 /* Return Value: name chosen                                             */
 /*                                                                       */
 /*************************************************************************/
-void getName(int *connfd, bool retry, int *pipe[]){
+void getName(int *connfd, bool retry, int *pipe){
 	char buff[MAX];
 	char tbuff[MAX];
 	char finbuff[MAX];
@@ -185,8 +186,8 @@ void getName(int *connfd, bool retry, int *pipe[]){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void setpipe(int *pipe){
-	pipe(pipe);
+void setpipe(int *pip){
+	pipe(*pip);
 	fcntl(pipe[], F_SETFL, 0_NONBLOCK);
 	return;
 }
@@ -313,7 +314,7 @@ int main(int argc, char *argv[]){
 	int numg; //number of games to be played
 	char name1[NICKSIZE];
 	char name2[NICKSIZE];
-
+	
 	if(argc == 2){
 		printf("yes 1");
 		numg = atoi(argv[1]);
@@ -332,52 +333,62 @@ int main(int argc, char *argv[]){
         // accept incoming connections on specified port number, converted to network byte order
         servaddr.sin_port        = htons(port));
 	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(struct sockaddr));
-	
-	if ( (pid1 = fork()) == 0) {      // child process made. 
-		
-		close(p1rec[0]);
-		connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
-		if(isReady(conn1fd) == 0){
-			getName(conn1fd, FALSE, *p1Sen[]);
-		}else{
-			printf("Error with isReady()");
-		}
-		
-	}
-	if (pid > 0){ //Parent
-		
-		if ( (pid2 = fork()) == 0) {      // child process 2 made. 
-			close(p2rec[0]);
-			connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
+	while{
+		if ( (pid1 = fork()) == 0) {      // child process made. 
+
+			close(p1rec[0]);
+			connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
 			if(isReady(conn1fd) == 0){
-				getName(conn2fd, FALSE, *p2Sen[]);
+				getName(conn1fd, FALSE, *p1sen[]);
 			}else{
-			printf("Error with isReady()");
+				printf("Error with isReady()");
 			}
-		}//START OF PARENT
-			
-		first = nameFirst(*p1sen[], *p2sen[], *name1, *name2, *nsize1, *nsize2);
-		if(first==1){
-			nameSecond(*p2sen[], *name2, *nsize2);
-		}else if(first==2){
-			nameSecond(*p1sen[], *name1, *nsize1);
-		}else{
-		printf("error with nameFirst")	
+
 		}
-		
-		close(sockfd);        //close listening socket; 
-		close(pfd1[1]);
-		close(pfd2[1]);
-		
-		
-				
-		close(connfd);     
-		close(conn2fd);
-		exit(0);
-	
-	
-		
+		if (pid > 0){ //Parent
+
+			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
+				close(p2rec[0]);
+				connp(sockfd, conn2fd, cliaddr, clilen); //waits for player 2
+				if(isReady(conn1fd) == 0){
+					getName(conn2fd, FALSE, *p2sen[]);
+				}else{
+				printf("Error with isReady()");
+				}
+			}//START OF PARENT
+
+			first = nameFirst(*p1sen[], *p2sen[], *name1, *name2, *nsize1, *nsize2);
+			if(first==1){
+				nameSecond(*p2sen[], *name2, *nsize2);
+				if(nsize2 == nsize1){
+					if(strncmp(name1, name2, nsize1)){
+						write(p1rec[1], "RETRY", sizeof("RETRY")); 
+					}
+				}
+			}else if(first==2){
+				nameSecond(*p1sen[], *name1, *nsize1);
+				if(nsize2 == nsize1){
+					if(strncmp(name1, name2, nsize1)){
+						write(p2rec[1], "RETRY", sizeof("RETRY")); 
+					}
+				}
+			}else{
+			printf("error with nameFirst");	
+			}
+
+			close(sockfd);        //close listening socket; 
+			close(p1rec[1]);
+			close(p2rec[1]);
+
+
+
+			close(conn1fd);     
+			close(conn2fd);
+			exit(0);
+
+
+
+		}
 	}
-	
 	
 }
