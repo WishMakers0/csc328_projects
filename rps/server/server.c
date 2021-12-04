@@ -189,7 +189,7 @@ void getName(int *connfd, int retry, int *pipe){
 /*************************************************************************/
 void setPipe(int pip){
 	pipe(&pip);
-	fcntl(&pip, F_SETFL, O_NONBLOCK);
+	fcntl(*pip, F_SETFL, O_NONBLOCK);
 	return;
 }
 /*************************************************************************/
@@ -204,7 +204,7 @@ void setPipe(int pip){
 int main(int argc, char *argv[]){
 	struct sockaddr_in      cliaddr, servaddr;
 	int sockfd, conn1fd, conn2fd; //declaration of sockets
-	int port;
+	int port, clilen;
 	sockfd = socket(AF_INET, SOCK_STREAM,0);
 	int p1sen[2];
 	int p2sen[2];
@@ -248,15 +248,15 @@ int main(int argc, char *argv[]){
 			
 			close(p1rec[0]);
 			connp(*sockfd, conn1fd, *cliaddr, clilen); //waiting for player 1
-			if(isReady(conn1fd) == 0){
-				getName(conn1fd, 0, *p1sen);
+			if(isReady(&conn1fd) == 0){
+				getName(&conn1fd, 0, *p1sen);
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
 							sendDelim(&conn1fd, "READY", 5, 0, 1);	
 						}else{
 							while(check != "READY"){
-								getName(conn1fd, 1, *p1sen);
+								getName(&conn1fd, 1, *p1sen);
 								block1 = -1;
 								while(block1 == -1)
 									block1=read(p1rec[0], &check, sizeof(check));
@@ -274,8 +274,8 @@ int main(int argc, char *argv[]){
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
 				connp(sockfd, conn2fd, *cliaddr, *clilen); //waits for player 2
-				if(isReady(conn1fd) == 0){
-					getName(conn2fd, 0, *p2sen);
+				if(isReady(&conn1fd) == 0){
+					getName(&conn2fd, 0, *p2sen);
 					while(block2 == -1)
 						block2=read(p2rec[0], check, sizeof(check));
 					
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]){
 						sendDelim(&conn2fd, "READY", 5, 0, 1);	
 					}else{
 						while(check != "READY"){
-							getName(conn2fd, 1, *p2sen);
+							getName(&conn2fd, 1, *p2sen);
 							block2 = -1;
 							while(block2 == -1)
 								block2=read(p2rec[0], &check, sizeof(check));
