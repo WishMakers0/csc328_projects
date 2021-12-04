@@ -213,7 +213,7 @@ Parameters: char* buffer - ip address buffer
 			struct sockaddr_in* server_addr - socket server address information
 Return value: N/A
 */
-void hostnameIpConvert(char* buffer, int sock, struct serveraddr_in* server_addr) {
+void hostnameIpConvert(char* buffer, int sock, struct sockaddr_in* server_addr) {
 	struct addrinfo hints, *res, *it;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -223,7 +223,8 @@ void hostnameIpConvert(char* buffer, int sock, struct serveraddr_in* server_addr
 	}
 
 	//for(it = res; it != NULL, it=it->ai_next) {}
-	server_addr->sin_addr = res->ai_info->sin_addr;
+	struct sockaddr_in* temp = (struct sockaddr_in*) res->ai_addr;
+	server_addr->sin_addr = temp->sin_addr;
 	//get first IP address and place it in server_addr
 
 	freeaddrinfo(res); //free this structure
@@ -256,7 +257,7 @@ int establishConnections(char* ip, int port, int* sock, struct sockaddr_in* serv
 	//connects to server socket
 	if (connect(*sock, (struct sockaddr*)server_addr, sizeof(struct sockaddr_in)) != 0) {
 		//error connecting to server!
-		print("Couldn't connect to server, aborting. \n");
+		printf("Couldn't connect to server, aborting. \n");
 		return -1;
 	}
 
