@@ -129,7 +129,7 @@ int nameFirst(int *pipe1, int *pipe2, char  *name1, char  *name2, char  *name1si
 void nameSecond(int *pipe, char  *name, char  *namesize){
 	int block = -1;
 	while(block == -1){
-			block = read(pipe[0], &name, sizeof(name);
+			block = read(pipe[0], &name, sizeof(name));
 		}
 	read(pipe[0], &namesize, sizeof(namesize));
 }
@@ -148,7 +148,7 @@ int isReady(int *connfd){
 	char tbuff[MAX]; // The function that takes in the processed data.
 	recvFinal(*connfd, buff, 0);
 	strsub(buff, tbuff);
-	return(strncmp(tbuf, "READY", 5));
+	return(strncmp(tbuff, "READY", 5));
 }
 
 /*************************************************************************/
@@ -159,21 +159,21 @@ int isReady(int *connfd){
 /* Return Value: name chosen                                             */
 /*                                                                       */
 /*************************************************************************/
-void getName(int *connfd, int retry, int *pipe){
+void getName(int *connfd, int retry, int pipe){
 	char buff[MAX];
 	char tbuff[MAX];
 	
 	int nsize; //size of the name
 	if(retry == 1){
-		sendDelim(&connfd, "RETRY", sizeof("RETRY"), 0, 4);	
+		sendDelim(*connfd, "RETRY", sizeof("RETRY"), 0, 4);	
 		
 	}
-	recvFinal(&connfd, buff, 0);
+	recvFinal(*connfd, buff, 0);
 	nsize = strsub(buff, tbuff);
 	if(strncmp(tbuff, "NICK", 4)){
 		char* finbuff = &tbuff[4];
 		write(pipe[1], &finbuff, sizeof(finbuff));
-		write(pipe[1], &size, sizeof(size));
+		write(pipe[1], &nsize, sizeof(size));
 	}
 	return;
 	
@@ -187,7 +187,7 @@ void getName(int *connfd, int retry, int *pipe){
 /* Return Value: none                                                    */
 /*                                                                       */
 /*************************************************************************/
-void setPipe(int pip){
+void setPipe(int *pip){
 	pipe(&pip);
 	fcntl(*pip, F_SETFL, O_NONBLOCK);
 	return;
@@ -247,21 +247,21 @@ int main(int argc, char *argv[]){
 		if ( (pid1 = fork()) == 0) {      // child process made. 
 			
 			close(p1rec[0]);
-			connp(*sockfd, conn1fd, *cliaddr, clilen); //waiting for player 1
+			connp(sockfd, conn1fd, cliaddr, clilen); //waiting for player 1
 			if(isReady(&conn1fd) == 0){
-				getName(&conn1fd, 0, *p1sen);
+				getName(&conn1fd, 0, p1sen);
 				while(block1 == -1)
 					block1 = read(p1rec[0], check, sizeof(check));
 					if(check == "READY"){
-							sendDelim(&conn1fd, "READY", 5, 0, 1);	
+							sendDelim(*conn1fd, "READY", 5, 0, 1);	
 						}else{
 							while(check != "READY"){
-								getName(&conn1fd, 1, *p1sen);
+								getName(&conn1fd, 1, p1sen);
 								block1 = -1;
 								while(block1 == -1)
 									block1=read(p1rec[0], &check, sizeof(check));
 							}
-							sendDelim(&conn1fd, "READY", 5, 0, 1);	
+							sendDelim(*conn1fd, "READY", 5, 0, 1);	
 						}
 				
 			}else{
@@ -269,13 +269,13 @@ int main(int argc, char *argv[]){
 			}
 
 		}
-		if (pid > 0){
+		if (ppid > 0){
 		
 			if ( (pid2 = fork()) == 0) {      // child process 2 made. 
 				close(p2rec[0]);
 				connp(sockfd, conn2fd, *cliaddr, *clilen); //waits for player 2
 				if(isReady(&conn1fd) == 0){
-					getName(&conn2fd, 0, *p2sen);
+					getName(&conn2fd, 0, p2sen);
 					while(block2 == -1)
 						block2=read(p2rec[0], check, sizeof(check));
 					
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]){
 						sendDelim(&conn2fd, "READY", 5, 0, 1);	
 					}else{
 						while(check != "READY"){
-							getName(&conn2fd, 1, *p2sen);
+							getName(&conn2fd, 1, p2sen);
 							block2 = -1;
 							while(block2 == -1)
 								block2=read(p2rec[0], &check, sizeof(check));
